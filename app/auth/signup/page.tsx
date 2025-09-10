@@ -7,13 +7,11 @@ export default function Page() {
   return (
     <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
-          <p className="text-sm text-foreground/70 mt-1">Sign up with your email to get started</p>
-        </div>
-
         <Card>
-          <CardHeader />
+          <CardHeader className="space-y-1 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+            <p className="text-sm text-foreground/70">Use your school email to continue</p>
+          </CardHeader>
           <CardContent>
             <form className="space-y-4">
               <div className="space-y-2">
