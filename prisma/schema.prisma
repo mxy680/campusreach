@@ -58,5 +58,3 @@ model VerificationToken {
 
   @@id([identifier, token])
 }
-
-// Optional for WebAuthn support
