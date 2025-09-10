@@ -8,13 +8,28 @@ on:
 jobs:
   build-and-check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: campusreach
+        ports:
+          - 5432:5432
+        # Wait for healthy DB before running steps
+        options: >-
+          --health-cmd "pg_isready -U postgres -d campusreach" \
+          --health-interval 5s \
+          --health-timeout 3s \
+          --health-retries 10
     env:
       CI: true
       # Avoid failing builds when env validation is strict
       SKIP_ENV_VALIDATION: '1'
       NEXTAUTH_URL: http://localhost:3000
       AUTH_SECRET: test-secret
-      DATABASE_URL: postgresql://user:pass@localhost:5432/db?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/campusreach?schema=public
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,6 +58,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Prisma format
+        run: pnpm exec prisma format
+
+      - name: Prisma validate
+        run: pnpm exec prisma validate
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations (deploy)
+        run: pnpm exec prisma migrate deploy
 
       - name: Lint
         run: pnpm lint
