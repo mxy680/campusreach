@@ -19,10 +19,10 @@ jobs:
           - 5432:5432
         # Wait for healthy DB before running steps
         options: >-
-          --health-cmd "pg_isready -U postgres -d campusreach" \
-          --health-interval 5s \
-          --health-timeout 3s \
-          --health-retries 10
+          --health-cmd='pg_isready -U postgres -d campusreach' 
+          --health-interval=5s 
+          --health-timeout=3s 
+          --health-retries=10
     env:
       CI: true
       # Avoid failing builds when env validation is strict
