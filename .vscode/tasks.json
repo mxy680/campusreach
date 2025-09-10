@@ -1,0 +1,60 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "pnpm",
+            "args": ["build"],
+            "group": "build",
+            "problemMatcher": "$tsc",
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Dev",
+            "type": "shell",
+            "command": "pnpm",
+            "args": ["dev"],
+            "isBackground": true,
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Install",
+            "type": "shell",
+            "command": "pnpm",
+            "args": ["install"],
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Migrate",
+            "type": "shell",
+            "command": "pnpm",
+            "args": ["exec", "prisma", "migrate", "dev", "--name", "dev"],
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Reset",
+            "type": "shell",
+            "command": "bash",
+            "args": ["-lc", "docker compose up -d db && pnpm exec prisma migrate reset --force"],
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Studio",
+            "type": "shell",
+            "command": "pnpm",
+            "args": ["exec", "prisma", "studio"],
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Test",
+            "type": "shell",
+            "command": "bash",
+            "args": ["-lc", "pnpm lint && pnpm typecheck"],
+            "problemMatcher": "$tsc",
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        }
+    ]
+}
