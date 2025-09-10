@@ -17,12 +17,6 @@ jobs:
           POSTGRES_DB: campusreach
         ports:
           - 5432:5432
-        # Wait for healthy DB before running steps
-        options: >-
-          --health-cmd='pg_isready -U postgres -d campusreach' 
-          --health-interval=5s 
-          --health-timeout=3s 
-          --health-retries=10
     env:
       CI: true
       # Avoid failing builds when env validation is strict
@@ -58,6 +52,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Wait for Postgres
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if (echo > /dev/tcp/localhost/5432) >/dev/null 2>&1; then
+              echo "Postgres is up";
+              break;
+            fi
+            echo "Waiting for Postgres... ($i)";
+            sleep 1;
+          done
 
       - name: Prisma format
         run: pnpm exec prisma format
