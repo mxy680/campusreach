@@ -6,10 +6,9 @@
         {
             "label": "Build",
             "type": "shell",
-            "command": "pnpm",
-            "args": ["build"],
+            "command": "bash",
+            "args": ["-lc", "docker compose up -d db"],
             "group": "build",
-            "problemMatcher": "$tsc",
             "presentation": { "reveal": "always", "panel": "dedicated" }
         },
         {
@@ -38,7 +37,7 @@
             "label": "Reset",
             "type": "shell",
             "command": "bash",
-            "args": ["-lc", "docker compose up -d db && pnpm exec prisma migrate reset --force"],
+            "args": ["-lc", "docker compose up -d && pnpm exec prisma migrate reset --force"],
             "presentation": { "reveal": "always", "panel": "dedicated" }
         },
         {
