@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 // School options dictionary
 const SCHOOLS: { value: string; label: string }[] = [
-  { value: "case-western-reserve", label: "Case Western Reserve University" },
+  { value: "cwru", label: "Case Western Reserve University" },
 ];
 
 export default function Page() {
@@ -29,7 +29,7 @@ export default function Page() {
         return;
       }
       if (email) {
-        router.push(`/auth/signin/email`);
+        router.push(`/auth/signin/email?email=${encodeURIComponent(email)}`);
         return;
       }
     } finally {
@@ -59,7 +59,7 @@ export default function Page() {
               <form className="space-y-4" onSubmit={onSubmit}>
                 <div className="space-y-2">
                   <Label>School</Label>
-                  <Select onValueChange={(v) => setSchool(v)}>
+                  <Select onValueChange={(v: string) => setSchool(v)}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select your school" />
                     </SelectTrigger>
