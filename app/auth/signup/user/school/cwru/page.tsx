@@ -22,13 +22,16 @@ export default function Page() {
         <div className="w-full max-w-sm">
           <Card>
             <CardHeader className="text-center space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight">Sign in with CWRU SSO</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Sign up with CWRU SSO</h1>
               <p className="text-sm text-foreground/70">
                 Use your CWRU Network ID and password. For students, employees, and alumni.
               </p>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" onClick={() => signIn("google", { callbackUrl: "/dashboard" })}>
+              <Button
+                className="w-full"
+                onClick={() => signIn("google", { callbackUrl: "/auth/signup/user/profile" })}
+              >
                 Continue with Single Sign-On
               </Button>
             </CardContent>
