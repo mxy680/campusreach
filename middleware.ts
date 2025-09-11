@@ -1,0 +1,101 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+
+// Protected route prefixes
+const PROFILE_PATH = "/auth/signup/user/profile";
+const DASHBOARD_PATH = "/dashboard";
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Always skip Next.js internals and API routes
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/static") ||
+    pathname === "/favicon.ico"
+  ) {
+    return NextResponse.next();
+  }
+
+  // Read NextAuth token (JWT strategy)
+  const token = await getToken({ req });
+  const isAuthed = !!token?.sub;
+
+  // Helper to build redirects safely
+  const redirect = (to: string) => {
+    const url = req.nextUrl.clone();
+    url.pathname = to;
+    url.search = ""; // avoid loops with same URL but different query
+    if (url.pathname === pathname) return NextResponse.next();
+    return NextResponse.redirect(url);
+  };
+
+  // If not authenticated, allow public pages; optionally gate private ones here
+  // Determine key route flags
+  const onProfile = pathname.startsWith(PROFILE_PATH);
+  const onDashboard = pathname.startsWith(DASHBOARD_PATH);
+  const onAuthPages = pathname === "/auth/signin" || pathname === "/auth/signup" || pathname.startsWith("/auth/signup/");
+
+  // If unauthenticated and accessing protected routes, send to sign-in with return URL
+  if (!isAuthed && (onDashboard || onProfile)) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/auth/signin";
+    url.search = `from=${encodeURIComponent(pathname)}`;
+    return NextResponse.redirect(url);
+  }
+
+  // From here on, user is authenticated. Apply completion gating and auth-page redirection
+  if (!isAuthed) {
+    return NextResponse.next();
+  }
+
+  // On relevant pages, check profile completion via internal API with forwarded cookies
+  let profileComplete = false;
+  if (onProfile || onDashboard) {
+    try {
+      const apiUrl = new URL("/api/profile/complete", req.nextUrl.origin);
+      const res = await fetch(apiUrl.toString(), {
+        headers: {
+          cookie: req.headers.get("cookie") || "",
+        },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { complete?: boolean };
+        profileComplete = !!data.complete;
+      }
+    } catch {
+      profileComplete = false;
+    }
+  }
+
+  // If profile is incomplete and user is navigating anywhere under dashboard, push to profile
+  if (!profileComplete && onDashboard) {
+    return redirect(PROFILE_PATH);
+  }
+
+  // If profile is complete and user tries to access profile page, push to dashboard
+  if (profileComplete && onProfile) {
+    return redirect(DASHBOARD_PATH);
+  }
+
+  // If authenticated and trying to access generic auth pages, push to dashboard
+  if (isAuthed && !onProfile && onAuthPages) {
+    return redirect(DASHBOARD_PATH);
+  }
+
+  return NextResponse.next();
+}
+
+// Configure which paths run through this middleware
+export const config = {
+  matcher: [
+    "/dashboard/:path*",
+    "/auth/signup/user/profile",
+    "/auth/signin",
+    "/auth/signup",
+    "/auth/signup/:path*",
+  ],
+};

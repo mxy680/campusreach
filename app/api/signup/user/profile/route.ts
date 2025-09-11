@@ -44,7 +44,15 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ ok: true });
+    const res = NextResponse.json({ ok: true });
+    // Mark profile as complete for middleware gating immediately
+    res.cookies.set("profile_complete", "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+    });
+    return res;
   } catch (err) {
     console.error("POST /api/signup/user/profile error", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
