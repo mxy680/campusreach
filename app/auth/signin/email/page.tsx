@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,14 @@ type FoundUser = {
 };
 
 export default function Page() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center text-sm text-foreground/70">Loading…</div>}>
+      <EmailSigninContent />
+    </Suspense>
+  );
+}
+
+function EmailSigninContent() {
   const [step, setStep] = useState<"missing" | "found" | "not_found">("missing");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
