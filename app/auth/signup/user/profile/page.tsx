@@ -66,11 +66,11 @@ export default function Page() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First name</Label>
-                    <Input id="firstName" name="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                    <Input id="firstName" name="firstName" placeholder="e.g., Jane" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last name</Label>
-                    <Input id="lastName" name="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                    <Input id="lastName" name="lastName" placeholder="e.g., Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                   </div>
                 </div>
 
