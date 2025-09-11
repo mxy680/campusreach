@@ -1,23 +1,37 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// School options dictionary
+const SCHOOLS: { value: string; label: string }[] = [
+  { value: "case-western-reserve", label: "Case Western Reserve University" },
+];
 
 export default function Page() {
-  const [mode, setMode] = useState<"school" | "email">("school");
   const [school, setSchool] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const router = useRouter();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!school && !email) return; // require at least one
     try {
       setSubmitting(true);
-      // Placeholder: integrate sign-in flow later
-      console.log("signin submit", { mode, school, email });
+      if (school) {
+        router.push(`/auth/signin/${encodeURIComponent(school)}`);
+        return;
+      }
+      if (email) {
+        router.push(`/auth/signin/email`);
+        return;
+      }
     } finally {
       setSubmitting(false);
     }
@@ -39,50 +53,42 @@ export default function Page() {
           <Card>
             <CardHeader className="text-center">
               <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-              <p className="text-sm text-foreground/70">
-                {mode === "school" ? "Find your school to continue" : "Use your school email to continue"}
-              </p>
+              <p className="text-sm text-foreground/70">Choose your school or use email to continue</p>
             </CardHeader>
             <CardContent>
               <form className="space-y-4" onSubmit={onSubmit}>
-                {mode === "school" ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="school">School</Label>
-                    <Input
-                      id="school"
-                      name="school"
-                      placeholder="e.g. Stanford University"
-                      value={school}
-                      onChange={(e) => setSchool(e.target.value)}
-                      required
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="you@school.edu"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label>School</Label>
+                  <Select onValueChange={(v) => setSchool(v)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select your school" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SCHOOLS.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <div className="flex items-center justify-between text-xs text-foreground/70">
-                  <span>
-                    {mode === "school" ? "Prefer email?" : "Prefer school search?"}
-                  </span>
-                  <button
-                    type="button"
-                    className="text-primary underline underline-offset-4"
-                    onClick={() => setMode(mode === "school" ? "email" : "school")}
-                  >
-                    {mode === "school" ? "Use email instead" : "Search by school"}
-                  </button>
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-foreground/60">or</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="you@school.edu"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
                 </div>
 
                 <Button type="submit" className="w-full" disabled={submitting}>
