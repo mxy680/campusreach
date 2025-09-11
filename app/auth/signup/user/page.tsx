@@ -67,6 +67,13 @@ export default function Page() {
                 <Button type="submit" className="w-full" disabled={!school || submitting}>
                   {submitting ? "Processing..." : "Continue"}
                 </Button>
+
+                <p className="text-xs text-foreground/70 text-center">
+                  Organization?{' '}
+                  <Link href="/auth/signup/organization" className="text-primary underline underline-offset-4">
+                    Create an account
+                  </Link>
+                </p>
               </form>
             </CardContent>
           </Card>
