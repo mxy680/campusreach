@@ -76,12 +76,12 @@ export default function Page() {
 
                 <div className="space-y-2">
                   <Label htmlFor="pronouns">Pronouns</Label>
-                  <Input id="pronouns" name="pronouns" placeholder="e.g., she/her" value={pronouns} onChange={(e) => setPronouns(e.target.value)} />
+                  <Input id="pronouns" name="pronouns" placeholder="e.g., she/her" value={pronouns} onChange={(e) => setPronouns(e.target.value)} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="major">Major</Label>
-                  <Input id="major" name="major" placeholder="e.g., Computer Science" value={major} onChange={(e) => setMajor(e.target.value)} />
+                  <Input id="major" name="major" placeholder="e.g., Computer Science" value={major} onChange={(e) => setMajor(e.target.value)} required />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -92,8 +92,10 @@ export default function Page() {
                       name="gradMonth"
                       placeholder="MM"
                       inputMode="numeric"
+                      title="Enter a valid month as MM (01-12)"
                       value={gradMonth}
                       onChange={(e) => setGradMonth(e.target.value)}
+                      required
                     />
                   </div>
                   <div className="space-y-2">
@@ -103,8 +105,10 @@ export default function Page() {
                       name="gradYear"
                       placeholder="YYYY"
                       inputMode="numeric"
+                      title="Enter a 4-digit year"
                       value={gradYear}
                       onChange={(e) => setGradYear(e.target.value)}
+                      required
                     />
                   </div>
                 </div>
