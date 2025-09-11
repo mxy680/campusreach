@@ -4,6 +4,7 @@ import { getToken } from "next-auth/jwt";
 
 // Protected route prefixes
 const PROFILE_PATH = "/auth/signup/user/profile";
+const ORG_PROFILE_PATH = "/auth/signup/organization/profile";
 const GENERIC_DASHBOARD_PATH = "/dashboard";
 const USER_DASHBOARD_PATH = "/user/dashboard";
 const ORG_DASHBOARD_PATH = "/org/dashboard";
@@ -37,6 +38,7 @@ export async function middleware(req: NextRequest) {
   // If not authenticated, allow public pages; optionally gate private ones here
   // Determine key route flags
   const onProfile = pathname.startsWith(PROFILE_PATH);
+  const onOrgProfile = pathname.startsWith(ORG_PROFILE_PATH);
   const onGenericDashboard = pathname.startsWith(GENERIC_DASHBOARD_PATH);
   const onUserDashboard = pathname.startsWith(USER_DASHBOARD_PATH);
   const onOrgDashboard = pathname.startsWith(ORG_DASHBOARD_PATH);
@@ -95,7 +97,8 @@ export async function middleware(req: NextRequest) {
   }
 
   // If authenticated and trying to access generic auth pages, push to respective dashboard
-  if (isAuthed && !onProfile && onAuthPages) {
+  // Do NOT redirect away from the organization profile step; allow it for both roles
+  if (isAuthed && !onProfile && !onOrgProfile && onAuthPages) {
     return redirect(role === "ORGANIZATION" ? ORG_DASHBOARD_PATH : USER_DASHBOARD_PATH);
   }
 

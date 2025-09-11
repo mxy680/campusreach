@@ -16,21 +16,8 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   providers,
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === "google") {
-        let candidate = (user?.email ?? "").toLowerCase();
-        if (!candidate) {
-          if (profile && typeof profile === "object" && "email" in profile) {
-            const pEmail = (profile as { email?: string }).email ?? "";
-            candidate = pEmail.toLowerCase();
-          }
-        }
-        const email = candidate;
-        if (!email.endsWith("@case.edu")) {
-          // Disallow non-@case.edu Google accounts
-          return false;
-        }
-      }
+    async signIn() {
+      // Allow Google sign-in for any domain
       return true;
     },
     async session({ session, token }) {
