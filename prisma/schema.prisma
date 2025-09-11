@@ -76,9 +76,16 @@ model Organization {
 
 /// Volunteer profile associated to a User and optionally to an Organization
 model Volunteer {
-  id             String  @id @default(cuid())
-  userId         String  @unique
-  organizationId String?
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  organizationId  String?
+
+  // Profile fields
+  firstName       String
+  lastName        String
+  pronouns        String?
+  major           String?
+  graduationDate  DateTime?
 
   // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
