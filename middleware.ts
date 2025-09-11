@@ -4,7 +4,9 @@ import { getToken } from "next-auth/jwt";
 
 // Protected route prefixes
 const PROFILE_PATH = "/auth/signup/user/profile";
-const DASHBOARD_PATH = "/dashboard";
+const GENERIC_DASHBOARD_PATH = "/dashboard";
+const USER_DASHBOARD_PATH = "/user/dashboard";
+const ORG_DASHBOARD_PATH = "/org/dashboard";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -35,11 +37,14 @@ export async function middleware(req: NextRequest) {
   // If not authenticated, allow public pages; optionally gate private ones here
   // Determine key route flags
   const onProfile = pathname.startsWith(PROFILE_PATH);
-  const onDashboard = pathname.startsWith(DASHBOARD_PATH);
+  const onGenericDashboard = pathname.startsWith(GENERIC_DASHBOARD_PATH);
+  const onUserDashboard = pathname.startsWith(USER_DASHBOARD_PATH);
+  const onOrgDashboard = pathname.startsWith(ORG_DASHBOARD_PATH);
+  const onAnyDashboard = onGenericDashboard || onUserDashboard || onOrgDashboard;
   const onAuthPages = pathname === "/auth/signin" || pathname === "/auth/signup" || pathname.startsWith("/auth/signup/");
 
   // If unauthenticated and accessing protected routes, send to sign-in with return URL
-  if (!isAuthed && (onDashboard || onProfile)) {
+  if (!isAuthed && (onAnyDashboard || onProfile)) {
     const url = req.nextUrl.clone();
     url.pathname = "/auth/signin";
     url.search = `from=${encodeURIComponent(pathname)}`;
@@ -51,39 +56,47 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // On relevant pages, check profile completion via internal API with forwarded cookies
+  // Fetch role and profile completion in one call
+  let role: "VOLUNTEER" | "ORGANIZATION" | null = null;
   let profileComplete = false;
-  if (onProfile || onDashboard) {
-    try {
-      const apiUrl = new URL("/api/profile/complete", req.nextUrl.origin);
-      const res = await fetch(apiUrl.toString(), {
-        headers: {
-          cookie: req.headers.get("cookie") || "",
-        },
-        cache: "no-store",
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { complete?: boolean };
-        profileComplete = !!data.complete;
-      }
-    } catch {
-      profileComplete = false;
+  try {
+    const apiUrl = new URL("/api/me", req.nextUrl.origin);
+    const res = await fetch(apiUrl.toString(), {
+      headers: { cookie: req.headers.get("cookie") || "" },
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { role: "VOLUNTEER" | "ORGANIZATION" | null; profileComplete: boolean };
+      role = data.role;
+      profileComplete = data.profileComplete;
     }
+  } catch {
+    // leave defaults
   }
 
-  // If profile is incomplete and user is navigating anywhere under dashboard, push to profile
-  if (!profileComplete && onDashboard) {
-    return redirect(PROFILE_PATH);
+  // Generic dashboard should route to role-specific dashboard
+  if (onGenericDashboard) {
+    if (role === "ORGANIZATION") return redirect(ORG_DASHBOARD_PATH);
+    // default volunteers
+    return redirect(USER_DASHBOARD_PATH);
   }
 
-  // If profile is complete and user tries to access profile page, push to dashboard
-  if (profileComplete && onProfile) {
-    return redirect(DASHBOARD_PATH);
+  // Role-specific routing
+  if (role === "VOLUNTEER") {
+    // Volunteers should not access org dashboard
+    if (onOrgDashboard) return redirect(USER_DASHBOARD_PATH);
+    // Volunteers must complete profile before accessing their dashboard
+    if (!profileComplete && onUserDashboard) return redirect(PROFILE_PATH);
+    // If profile complete and trying to access profile page, push to their dashboard
+    if (profileComplete && onProfile) return redirect(USER_DASHBOARD_PATH);
+  } else if (role === "ORGANIZATION") {
+    // Orgs should not access user dashboard or profile page
+    if (onUserDashboard || onProfile) return redirect(ORG_DASHBOARD_PATH);
   }
 
-  // If authenticated and trying to access generic auth pages, push to dashboard
+  // If authenticated and trying to access generic auth pages, push to respective dashboard
   if (isAuthed && !onProfile && onAuthPages) {
-    return redirect(DASHBOARD_PATH);
+    return redirect(role === "ORGANIZATION" ? ORG_DASHBOARD_PATH : USER_DASHBOARD_PATH);
   }
 
   return NextResponse.next();
@@ -93,6 +106,8 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/user/dashboard/:path*",
+    "/org/dashboard/:path*",
     "/auth/signup/user/profile",
     "/auth/signin",
     "/auth/signup",

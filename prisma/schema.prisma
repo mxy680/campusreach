@@ -3,6 +3,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  VOLUNTEER
+  ORGANIZATION
+}
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -16,6 +21,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   volunteer     Volunteer?
+  role          Role       @default(VOLUNTEER)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
