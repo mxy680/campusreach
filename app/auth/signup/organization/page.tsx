@@ -11,14 +11,32 @@ import { signIn } from "next-auth/react";
 export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !password || !confirmPassword) return;
+    if (password !== confirmPassword) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
     try {
       setSubmitting(true);
-      router.push(`/auth/signin/email?email=${encodeURIComponent(email)}`);
+      const res = await fetch("/api/signup/organization/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) {
+        // Immediately sign in so the profile API is authorized
+        await signIn("credentials", { email, password, redirect: false });
+        router.push("/auth/signup/organization/profile");
+        return;
+      }
+      console.error("Credentials signup failed", await res.text());
     } finally {
       setSubmitting(false);
     }
@@ -52,11 +70,54 @@ export default function Page() {
                     placeholder="staff@company.org"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
                 </div>
 
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "Processing..." : "Continue"}
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Create a password to use email sign-in"
+                    value={password}
+                    onChange={(e) => {
+                      setPasswordError("");
+                      setPassword(e.target.value);
+                    }}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm password</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Re-enter your password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setPasswordError("");
+                      setConfirmPassword(e.target.value);
+                    }}
+                    required
+                  />
+                </div>
+
+                {passwordError && (
+                  <p className="text-xs text-destructive text-center">{passwordError}</p>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={
+                    submitting || !email || !password || !confirmPassword || password !== confirmPassword
+                  }
+                >
+                  {submitting ? "Processing..." : "Create account"}
                 </Button>
 
                 <div className="flex items-center gap-3">

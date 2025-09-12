@@ -5,6 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { User } from "@prisma/client";
 
 const providers: NextAuthOptions["providers"] = [
   GoogleProvider({
@@ -32,7 +33,7 @@ const providers: NextAuthOptions["providers"] = [
         email: user.email,
         name: user.name ?? null,
         image: user.image ?? null,
-      } as any;
+      } as User;
     },
   }),
 ];

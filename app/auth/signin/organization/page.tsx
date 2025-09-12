@@ -6,10 +6,13 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { signIn } from "next-auth/react";
 
 export default function Page() {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [password, setPassword] = useState("");
+  const [credSubmitting, setCredSubmitting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
@@ -19,6 +22,26 @@ export default function Page() {
       setEmailError("Please enter your email");
       return;
     }
+
+  async function onCredentials(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!email || !password) {
+      setEmailError(!email ? "Please enter your email" : "");
+      return;
+    }
+    try {
+      setCredSubmitting(true);
+      const res = await signIn("credentials", {
+        email,
+        password,
+        callbackUrl: "/org/dashboard",
+        redirect: true,
+      });
+      return res;
+    } finally {
+      setCredSubmitting(false);
+    }
+  }
     try {
       setSubmitting(true);
       router.push(`/auth/signin/email?email=${encodeURIComponent(email)}`);
@@ -69,6 +92,29 @@ export default function Page() {
                 <Button type="submit" className="w-full" disabled={submitting}>
                   {submitting ? "Processing..." : "Continue"}
                 </Button>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-foreground/60">or sign in with password</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
+                <form className="space-y-3" onSubmit={onCredentials}>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="Your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={credSubmitting}>
+                    {credSubmitting ? "Signing in..." : "Sign in"}
+                  </Button>
+                </form>
 
                 <p className="text-xs text-center text-foreground/60">
                   Volunteer?{" "}

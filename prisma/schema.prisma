@@ -19,7 +19,6 @@ model User {
   emailVerified DateTime?
   image         String?
   accounts      Account[]
-  sessions      Session[]
   volunteer     Volunteer?
   role          Role       @default(VOLUNTEER)
   hashedPassword String?
@@ -49,15 +48,6 @@ model Account {
   @@id([provider, providerAccountId])
 }
 
-model Session {
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
 
 model VerificationToken {
   identifier String
