@@ -15,6 +15,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
+    // Disallow creating an org profile if this account is already a volunteer
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { volunteer: true },
+    });
+    if (me?.volunteer || me?.role === "VOLUNTEER") {
+      return NextResponse.json({ error: "Email already used for a volunteer account" }, { status: 409 });
+    }
+
     // Ensure the user has ORGANIZATION role
     await prisma.user.update({
       where: { id: session.user.id },

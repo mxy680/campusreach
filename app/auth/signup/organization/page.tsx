@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -10,11 +10,13 @@ import { signIn } from "next-auth/react";
 
 export default function Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const error = searchParams.get("error");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,7 +35,7 @@ export default function Page() {
       if (res.ok) {
         // Immediately sign in so the profile API is authorized
         await signIn("credentials", { email, password, redirect: false });
-        router.push("/auth/signup/organization/profile");
+        router.push("/auth/signup/organization/start");
         return;
       }
       console.error("Credentials signup failed", await res.text());
@@ -57,9 +59,14 @@ export default function Page() {
           <Card>
             <CardHeader className="text-center">
               <h1 className="text-2xl font-semibold tracking-tight">Create an organization</h1>
-              <p className="text-sm text-foreground/70">Sign up with Google or email</p>
+              <p className="text-sm text-foreground/70">Sign up with email</p>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="text-sm text-destructive border border-destructive/40 bg-destructive/5 rounded-md p-3 mb-4 text-center">
+                  An account with this email already exists. Please sign in instead.
+                </div>
+              )}
               <form className="space-y-4" onSubmit={onSubmit}>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -120,27 +127,7 @@ export default function Page() {
                   {submitting ? "Processing..." : "Create account"}
                 </Button>
 
-                <div className="flex items-center gap-3">
-                  <div className="h-px flex-1 bg-border" />
-                  <span className="text-xs text-foreground/60">or</span>
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full flex items-center justify-center gap-2"
-                  onClick={() => signIn("google", { callbackUrl: "/auth/signup/organization/profile" })}
-                >
-                  {/* Simple Google logo */}
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
-                    <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12 s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C33.691,6.053,29.082,4,24,4C12.955,4,4,12.955,4,24 s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
-                    <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,16.108,18.961,13,24,13c3.059,0,5.842,1.154,7.961,3.039 l5.657-5.657C33.691,6.053,29.082,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
-                    <path fill="#4CAF50" d="M24,44c5.166,0,9.799-1.977,13.285-5.193l-6.147-5.201C29.101,35.091,26.66,36,24,36 c-5.202,0-9.619-3.317-11.283-7.946l-6.53,5.027C9.505,39.556,16.227,44,24,44z"/>
-                    <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-3.918,5.606 c0.001-0.001,0.002-0.001,0.003-0.002l6.147,5.201C36.971,39.121,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
-                  </svg>
-                  Sign up with Google
-                </Button>
+                
 
                 <p className="text-xs text-foreground/70 text-center">
                   Volunteer?{" "}

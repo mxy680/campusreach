@@ -13,9 +13,13 @@ export async function POST(req: Request) {
     const hash = await bcrypt.hash(password, 10);
 
     // Try to find existing user by email
-    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail }, include: { volunteer: true } });
     if (existing) {
-      // If user exists, set role to ORGANIZATION and (re)set password
+      // If user already has a volunteer profile or explicit volunteer role, block
+      if (existing.volunteer || existing.role === "VOLUNTEER") {
+        return NextResponse.json({ error: "Email already used for a volunteer account" }, { status: 409 });
+      }
+      // Otherwise, allow setting/updating password and keep/ensure ORGANIZATION role
       await prisma.user.update({
         where: { id: existing.id },
         data: {

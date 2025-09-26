@@ -22,9 +22,16 @@ export default function Page() {
       setEmailError("Please enter your email");
       return;
     }
+    try {
+      setSubmitting(true);
+      router.push(`/auth/signin/email?email=${encodeURIComponent(email)}`);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
-  async function onCredentials(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function onCredentials(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!email || !password) {
       setEmailError(!email ? "Please enter your email" : "");
       return;
@@ -40,13 +47,6 @@ export default function Page() {
       return res;
     } finally {
       setCredSubmitting(false);
-    }
-  }
-    try {
-      setSubmitting(true);
-      router.push(`/auth/signin/email?email=${encodeURIComponent(email)}`);
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -99,7 +99,7 @@ export default function Page() {
                   <div className="h-px flex-1 bg-border" />
                 </div>
 
-                <form className="space-y-3" onSubmit={onCredentials}>
+                <div className="space-y-3">
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input
@@ -111,10 +111,10 @@ export default function Page() {
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={credSubmitting}>
+                  <Button type="button" className="w-full" disabled={credSubmitting} onClick={() => onCredentials()}>
                     {credSubmitting ? "Signing in..." : "Sign in"}
                   </Button>
-                </form>
+                </div>
 
                 <p className="text-xs text-center text-foreground/60">
                   Volunteer?{" "}
