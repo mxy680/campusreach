@@ -128,7 +128,7 @@ function DragHandle({ id }: { id: number }) {
       {...listeners}
       variant="ghost"
       size="icon"
-      className="text-muted-foreground size-7 hover:bg-transparent"
+      className="text-muted-foreground size-6 p-0 hover:bg-transparent"
     >
       <IconGripVertical className="text-muted-foreground size-3" />
       <span className="sr-only">Drag to reorder</span>
@@ -144,7 +144,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
   {
     id: "profile",
-    header: () => <div className="w-full text-center">Profile</div>,
+    header: () => <div className="w-[44px] mx-auto text-center">Profile</div>,
     cell: ({ row }) => {
       const name: string = row.original.volunteerName
       const src: string | null | undefined = row.original.avatarUrl
@@ -155,8 +155,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         .slice(0, 2)
         .toUpperCase()
       return (
-        <div className="w-full flex items-center justify-center">
-          <Avatar className="h-8 w-8">
+        <div className="w-[44px] mx-auto px-1 flex items-center justify-center">
+          <Avatar className="h-7 w-7">
             <AvatarImage src={src ?? undefined} alt={name} />
             <AvatarFallback>{initials || "?"}</AvatarFallback>
           </Avatar>
@@ -167,35 +167,39 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
   {
     accessorKey: "volunteerName",
-    header: () => <div className="w-full text-center">Volunteer Name</div>,
+    header: () => (
+      <div className="w-full text-center truncate max-w-[16ch]">Volunteer Name</div>
+    ),
     cell: ({ row }) => (
-      <div className="w-full text-center">
+      <div className="px-2 text-center truncate max-w-[16ch]">
         {row.original.volunteerName || "Unknown"}
       </div>
     ),
   },
   {
     accessorKey: "email",
-    header: () => <div className="w-full text-center">Email</div>,
+    header: () => <div className="w-full text-center truncate max-w-[22ch]">Email</div>,
     cell: ({ row }) => (
-      <div className="w-full text-center truncate">
-        {row.original.email || "—"}
-      </div>
+      <div className="px-2 text-center truncate max-w-[22ch]">{row.original.email || "—"}</div>
     ),
   },
   {
     accessorKey: "phone",
-    header: () => <div className="w-full text-center">Phone Number</div>,
+    header: () => (
+      <div className="w-full text-center truncate max-w-[14ch]">Phone Number</div>
+    ),
     cell: ({ row }) => (
-      <div className="w-full text-center">{row.original.phone || "—"}</div>
+      <div className="px-2 text-center truncate max-w-[14ch]">
+        {row.original.phone || "—"}
+      </div>
     ),
   },
   {
     accessorKey: "pronouns",
-    header: () => <div className="w-full text-center">Pronouns</div>,
+    header: () => <div className="w-full text-center truncate max-w-[10ch]">Pronouns</div>,
     cell: ({ row }) => (
-      <div className="w-full flex items-center justify-center">
-        <Badge variant="outline" className="text-muted-foreground px-1.5">
+      <div className="px-2 w-full flex items-center justify-center">
+        <Badge variant="outline" className="text-muted-foreground px-1 text-xs">
           {row.original.pronouns || "—"}
         </Badge>
       </div>
@@ -203,39 +207,49 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
   {
     accessorKey: "major",
-    header: () => <div className="w-full text-center">Major</div>,
+    header: () => <div className="w-full text-center truncate max-w-[16ch]">Major</div>,
     cell: ({ row }) => (
-      <div className="w-full text-center">{row.original.major || "—"}</div>
+      <div className="px-2 text-center truncate max-w-[16ch]">
+        {row.original.major || "—"}
+      </div>
     ),
   },
   {
     accessorKey: "gradDate",
-    header: () => <div className="w-full text-center">Grad Date</div>,
+    header: () => <div className="w-full text-center truncate max-w-[12ch]">Grad Date</div>,
     cell: ({ row }) => {
       const v = row.original.gradDate
-      return <div className="w-full text-center">{formatDateUTC(v)}</div>
+      return (
+        <div className="px-2 text-center truncate max-w-[12ch]">{formatDateUTC(v)}</div>
+      )
     },
   },
   {
     accessorKey: "signedUpAt",
-    header: () => <div className="w-full text-center">Signed Up At</div>,
+    header: () => (
+      <div className="w-full text-center truncate max-w-[18ch]">Signed Up At</div>
+    ),
     cell: ({ row }) => {
       const v = row.original.signedUpAt
-      return <div className="w-full text-center">{formatDateTimeUTC(v)}</div>
+      return (
+        <div className="px-2 text-center truncate max-w-[18ch]">{formatDateTimeUTC(v)}</div>
+      )
     },
   },
   {
     accessorKey: "totalHours",
     header: () => <div className="w-full text-center">Total Hours</div>,
     cell: ({ row }) => (
-      <div className="w-full text-center">{row.original.totalHours ?? 0}</div>
+      <div className="px-2 w-[6ch] mx-auto text-center">
+        {row.original.totalHours ?? 0}
+      </div>
     ),
   },
   {
     accessorKey: "notes",
-    header: () => <div className="w-full text-center">Notes</div>,
+    header: () => <div className="w-full text-center truncate max-w-[22ch]">Notes</div>,
     cell: ({ row }) => (
-      <div className="w-full text-center truncate text-muted-foreground">
+      <div className="px-2 text-center truncate max-w-[22ch] text-muted-foreground">
         {row.original.notes || ""}
       </div>
     ),
@@ -243,9 +257,10 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   // Actions column with delete button (last)
   {
     id: "actions",
-    header: () => <div className="w-full text-center">Remove</div>,
+    header: () => <div className="w-[44px] mx-auto text-center">Remove</div>,
+    enableHiding: false,
     cell: ({ row, table }) => (
-      <div className="w-full flex items-center justify-center">
+      <div className="w-[44px] mx-auto px-1 flex items-center justify-center">
         <Button
           variant="outline"
           size="icon"
@@ -305,7 +320,15 @@ export function DataTable({
   const [eventQuery, setEventQuery] = React.useState("")
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({
+      email: false,
+      pronouns: false,
+      notes: false,
+      gradDate: false,
+      // Always show profile and actions; kept here for clarity though enableHiding=false enforces it
+      profile: true,
+      actions: true,
+    })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -400,10 +423,10 @@ export function DataTable({
           <Button
             variant="outline"
             size="sm"
-            className="w-48 justify-between"
+            className="w-64 justify-between"
             onClick={() => setEventOpen((o) => !o)}
           >
-            <span className="truncate overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="truncate">
               {eventOptions.find((e) => e.id === eventValue)?.label ?? "Select Event"}
             </span>
             <IconChevronDown className={`ml-2 shrink-0 transition ${eventOpen ? "rotate-180" : ""}`} />
@@ -453,11 +476,11 @@ export function DataTable({
             <Button
               variant="outline"
               size="sm"
-              className="w-48 justify-between"
+              className="w-44 justify-between"
               onClick={() => setColumnsOpen((o) => !o)}
             >
-              <span className="hidden lg:inline truncate overflow-hidden text-ellipsis whitespace-nowrap">Select columns</span>
-              <span className="lg:hidden truncate overflow-hidden text-ellipsis whitespace-nowrap">Columns</span>
+              <span className="hidden lg:inline truncate">Select columns</span>
+              <span className="lg:hidden truncate">Columns</span>
               <IconChevronDown className={`ml-2 shrink-0 transition ${columnsOpen ? "rotate-180" : ""}`} />
             </Button>
             {columnsOpen && (
@@ -501,9 +524,9 @@ export function DataTable({
       </div>
       <TabsContent
         value="outline"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+        className="relative flex flex-col gap-4 overflow-y-auto px-4 lg:px-6"
       >
-        <div className="overflow-hidden rounded-lg border">
+        <div className="w-full max-w-full overflow-x-auto rounded-lg border">
           <DndContext
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
@@ -511,8 +534,8 @@ export function DataTable({
             sensors={sensors}
             id={sortableId}
           >
-            <Table>
-              <TableHeader className="bg-muted sticky top-0 z-10">
+            <Table className="w-full table-fixed">
+              <TableHeader className="bg-muted sticky top-0 z-10 **:data-[slot=table-head]:px-2 **:data-[slot=table-head]:first:w-6">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
@@ -530,7 +553,7 @@ export function DataTable({
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody className="**:data-[slot=table-cell]:first:w-8">
+              <TableBody className="**:data-[slot=table-cell]:px-2 **:data-[slot=table-cell]:first:w-6">
                 {table.getRowModel().rows?.length ? (
                   <SortableContext
                     items={dataIds}
