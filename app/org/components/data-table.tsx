@@ -329,6 +329,7 @@ export function DataTable({
       profile: true,
       actions: true,
     })
+  const [visibilityHydrated, setVisibilityHydrated] = React.useState(false)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -395,25 +396,34 @@ export function DataTable({
     setRows(data)
   }, [data])
 
-  // Restore column visibility from localStorage
+  // Restore column visibility from localStorage (once)
   React.useEffect(() => {
     try {
       const raw = localStorage.getItem("org:table:columnVisibility")
       if (raw) {
         const parsed = JSON.parse(raw)
         if (parsed && typeof parsed === "object") {
-          setColumnVisibility(parsed as VisibilityState)
+          // Ensure always-visible columns remain visible
+          const next: VisibilityState = {
+            ...parsed,
+            profile: true,
+            actions: true,
+          }
+          setColumnVisibility(next)
         }
       }
-    } catch {}
+    } finally {
+      setVisibilityHydrated(true)
+    }
   }, [])
 
-  // Persist column visibility on change
+  // Persist column visibility on change (after hydration)
   React.useEffect(() => {
+    if (!visibilityHydrated) return
     try {
       localStorage.setItem("org:table:columnVisibility", JSON.stringify(columnVisibility))
     } catch {}
-  }, [columnVisibility])
+  }, [columnVisibility, visibilityHydrated])
 
   return (
     <Tabs value={viewValue} onValueChange={(val) => setViewValue(val)} className="w-full flex-col justify-start gap-6">
