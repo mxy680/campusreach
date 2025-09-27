@@ -1,22 +1,31 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
 
+function ErrorBanner() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  if (!error) return null;
+  return (
+    <div className="text-sm text-destructive border border-destructive/40 bg-destructive/5 rounded-md p-3 mb-4 text-center">
+      An account with this email already exists. Please sign in instead.
+    </div>
+  );
+}
+
 export default function Page() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const error = searchParams.get("error");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -62,11 +71,9 @@ export default function Page() {
               <p className="text-sm text-foreground/70">Sign up with email</p>
             </CardHeader>
             <CardContent>
-              {error && (
-                <div className="text-sm text-destructive border border-destructive/40 bg-destructive/5 rounded-md p-3 mb-4 text-center">
-                  An account with this email already exists. Please sign in instead.
-                </div>
-              )}
+              <Suspense fallback={null}>
+                <ErrorBanner />
+              </Suspense>
               <form className="space-y-4" onSubmit={onSubmit}>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
