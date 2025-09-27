@@ -373,6 +373,26 @@ export function DataTable({
     setRows(data)
   }, [data])
 
+  // Restore column visibility from localStorage
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem("org:table:columnVisibility")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed && typeof parsed === "object") {
+          setColumnVisibility(parsed as VisibilityState)
+        }
+      }
+    } catch {}
+  }, [])
+
+  // Persist column visibility on change
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("org:table:columnVisibility", JSON.stringify(columnVisibility))
+    } catch {}
+  }, [columnVisibility])
+
   return (
     <Tabs value={viewValue} onValueChange={(val) => setViewValue(val)} className="w-full flex-col justify-start gap-6">
       <div className="flex items-center justify-between px-4 lg:px-6">

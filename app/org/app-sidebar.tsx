@@ -33,6 +33,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type OrgMe = {
   user: { id: string; email: string | null; name: string | null; image: string | null; role: string }
@@ -153,6 +154,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [me, setMe] = useState<OrgMe | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -165,7 +167,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       } catch {
         // ignore; render fallback
       } finally {
-        // no-op
+        if (mounted) setLoaded(true)
       }
     })()
     return () => {
@@ -190,10 +192,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">{orgName}</span>
-              </a>
+              {loaded ? (
+                <a href="#" className="transition-opacity duration-300 opacity-100">
+                  <IconInnerShadowTop className="!size-5" />
+                  <span className="text-base font-semibold">{orgName}</span>
+                </a>
+              ) : (
+                <div className="flex items-center gap-2 transition-opacity duration-300 opacity-100">
+                  <IconInnerShadowTop className="!size-5" />
+                  <Skeleton className="h-5 w-32" />
+                </div>
+              )}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -204,7 +213,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={userForFooter} />
+        {loaded ? (
+          <div className="transition-opacity duration-300 opacity-100">
+            <NavUser user={userForFooter} />
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 p-2 transition-opacity duration-300 opacity-100">
+            <Skeleton className="size-8 rounded-full" />
+            <div className="grid gap-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   )

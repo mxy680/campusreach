@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { DataTable, schema } from "../components/data-table"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const eventOptions = [
   { id: "event-1", label: "Campus Cleanup Day" },
@@ -89,7 +90,64 @@ const eventData: Record<string, Array<import("zod").z.infer<typeof schema>>> = {
 }
 
 export default function Page() {
-  const [eventId, setEventId] = React.useState<string>(eventOptions[0].id)
+  const [eventId, setEventId] = React.useState<string | null>(null)
+  const [ready, setReady] = React.useState(false)
+  const [skeletonVisible, setSkeletonVisible] = React.useState(false)
+  // Restore persisted selected event
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("org:dashboard:selectedEvent")
+      if (saved) {
+        setEventId(saved)
+      } else {
+        setEventId(eventOptions[0].id)
+      }
+    } catch {
+      setEventId(eventOptions[0].id)
+    } finally {
+      setReady(true)
+    }
+  }, [])
+  // Persist on change
+  React.useEffect(() => {
+    if (!eventId) return
+    try {
+      localStorage.setItem("org:dashboard:selectedEvent", eventId)
+    } catch { }
+  }, [eventId])
+  // Trigger skeleton fade-in on first paint
+  React.useEffect(() => {
+    if (!ready || eventId) return
+    const id = requestAnimationFrame(() => setSkeletonVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [ready, eventId])
+  if (!ready || !eventId) {
+    return (
+      <main className={`p-6 space-y-4 transition-opacity duration-300 ${skeletonVisible ? "opacity-100" : "opacity-0"}`}>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-9 w-40" />
+          <Skeleton className="h-9 w-28" />
+        </div>
+        <div className="rounded-lg border">
+          <div className="border-b p-3">
+            <Skeleton className="h-6 w-1/3" />
+          </div>
+          <div className="divide-y">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="grid grid-cols-6 gap-4 p-3">
+                <Skeleton className="h-5 w-12" />
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-8 w-8 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    )
+  }
   const rows = eventData[eventId] ?? []
   return (
     <main className="p-6">
@@ -97,7 +155,7 @@ export default function Page() {
         data={rows}
         eventOptions={eventOptions as unknown as { id: string; label: string }[]}
         eventValue={eventId}
-        onEventChange={setEventId}
+        onEventChange={(id) => setEventId(id)}
       />
     </main>
   )
