@@ -39,6 +39,16 @@ export function NavMain({
   const [datetime, setDatetime] = React.useState("")
   const [volunteers, setVolunteers] = React.useState<number | "">("")
   const [submitting, setSubmitting] = React.useState(false)
+  const [open, setOpen] = React.useState(false)
+
+  const resetForm = () => {
+    setTitle("")
+    setDesc("")
+    setDatetime("")
+    setVolunteers("")
+    setSelectedSpecialties([])
+    setSelectedFiles([])
+  }
   const specialtyOptions: string[] = [
     "Environmental Science",
     "Public Health",
@@ -54,7 +64,13 @@ export function NavMain({
       <SidebarGroupContent className="flex flex-col gap-2">
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
-            <Dialog>
+            <Dialog
+              open={open}
+              onOpenChange={(o) => {
+                setOpen(o)
+                if (!o) resetForm()
+              }}
+            >
               <DialogTrigger asChild>
                 <SidebarMenuButton
                   tooltip="Schedule Event"
@@ -87,13 +103,8 @@ export function NavMain({
                       for (const f of selectedFiles) fd.append("attachments", f, f.name)
                       const res = await fetch("/api/org/events", { method: "POST", body: fd })
                       if (!res.ok) throw new Error("Failed to create event")
-                      // reset
-                      setTitle("")
-                      setDesc("")
-                      setDatetime("")
-                      setVolunteers("")
-                      setSelectedSpecialties([])
-                      setSelectedFiles([])
+                      // close & reset via onOpenChange
+                      setOpen(false)
                     } finally {
                       setSubmitting(false)
                     }
