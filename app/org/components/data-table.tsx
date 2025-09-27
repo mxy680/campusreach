@@ -27,7 +27,6 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconGripVertical,
-  IconLayoutColumns,
   IconTrash,
 } from "@tabler/icons-react"
 import {
@@ -399,9 +398,8 @@ export function DataTable({
         <div className="relative @4xl/main:hidden">
           <Label htmlFor="event-combobox" className="sr-only">Event</Label>
           <Button variant="outline" size="sm" onClick={() => setEventOpen((o) => !o)}>
-            <IconLayoutColumns />
-            <span className="ml-2">{eventOptions.find((e) => e.id === eventValue)?.label ?? "Select Event"}</span>
-            <IconChevronDown className={eventOpen ? "ml-1 rotate-180 transition" : "ml-1 transition"} />
+            <span>{eventOptions.find((e) => e.id === eventValue)?.label ?? "Select Event"}</span>
+            <IconChevronDown className={`ml-1 transition ${eventOpen ? "rotate-180" : ""}`} />
           </Button>
           {eventOpen && (
             <div className="absolute z-20 mt-2 w-64 rounded-md border bg-popover p-2 shadow-md">
@@ -446,14 +444,14 @@ export function DataTable({
         <div className="flex items-center gap-2">
           <div className="relative">
             <Button variant="outline" size="sm" onClick={() => setColumnsOpen((o) => !o)}>
-              <IconLayoutColumns />
-              <span className="hidden lg:inline">Columns</span>
-              <IconChevronDown className={columnsOpen ? "rotate-180 transition" : "transition"} />
+              <span className="hidden lg:inline">Select columns</span>
+              <span className="lg:hidden">Columns</span>
+              <IconChevronDown className={`ml-1 transition ${columnsOpen ? "rotate-180" : ""}`} />
             </Button>
             {columnsOpen && (
               <div className="absolute right-0 z-20 mt-2 w-56 rounded-md border bg-popover p-2 shadow-md">
                 <Input
-                  placeholder="Search columns..."
+                  placeholder="Filter columns..."
                   className="h-8 mb-2"
                   value={columnsQuery}
                   onChange={(e) => setColumnsQuery(e.target.value)}
@@ -546,8 +544,7 @@ export function DataTable({
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} volunteer(s) selected.
+            Total volunteers: {table.getCoreRowModel().rows.length}
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
