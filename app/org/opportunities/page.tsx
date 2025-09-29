@@ -349,12 +349,12 @@ export default function Page() {
             ) : (
               <ul className="divide-y rounded-md border">
                 {past.map((ev) => (
-                  <li key={ev.id} className="grid grid-cols-1 gap-3 p-4 md:grid-cols-12 md:items-center rounded-md hover:bg-muted/50 hover:ring-1 hover:ring-border transition">
-                    <div className="md:col-span-4">
+                  <li key={ev.id} className="grid grid-cols-1 gap-4 md:grid-cols-12 md:items-center md:gap-x-6 p-5 rounded-md hover:bg-muted/50 hover:ring-1 hover:ring-border transition">
+                    <div className="md:col-span-4 space-y-1.5">
                       <div className="text-base font-medium">{ev.title}</div>
                       <div className="text-xs text-muted-foreground line-clamp-1">{ev.shortDescription || "—"}</div>
                     </div>
-                    <div className="md:col-span-4 space-y-1">
+                    <div className="md:col-span-6 space-y-2">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <IconCalendar className="size-4" />
                         <span>{formatFriendly(ev.startsAt).full}</span>
@@ -364,7 +364,7 @@ export default function Page() {
                         {(() => {
                           const pct = Math.min(100, Math.round(((ev.signedUpCount ?? 0) / Math.max(1, ev.volunteersNeeded)) * 100))
                           return (
-                            <div className="h-2 w-[120px] rounded bg-muted">
+                            <div className="h-2 w-40 rounded bg-muted">
                               <div className="h-2 rounded bg-primary" style={{ width: `${pct}%` }} />
                             </div>
                           )
@@ -372,14 +372,7 @@ export default function Page() {
                         <span className="text-xs text-muted-foreground">{ev.signedUpCount ?? 0}/{ev.volunteersNeeded}</span>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 md:col-span-2">
-                      {(ev.specialties ?? []).slice(0, 2).map((s) => (
-                        <span key={s} className="rounded-sm bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{s}</span>
-                      ))}
-                      {(ev.specialties && ev.specialties.length > 2) && (
-                        <span className="text-[10px] text-muted-foreground">+{ev.specialties.length - 2}</span>
-                      )}
-                    </div>
+                    
                     <div className="flex justify-end gap-2 md:col-span-2">
                       <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => startEdit(ev)}>
                         <IconPencil className="size-4" />

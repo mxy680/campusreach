@@ -1,4 +1,7 @@
-import { ReactNode } from "react";
+"use client";
+
+import { ReactNode, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import { AppSidebar } from "./app-sidebar";
 import {
   SidebarInset,
@@ -8,6 +11,25 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 export default function OrgLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const title = useMemo(() => {
+    if (!pathname) return "Dashboard";
+    // Expect paths like /org, /org/dashboard, /org/profile, etc.
+    const parts = pathname.split("/").filter(Boolean);
+    const afterOrg = parts.slice(parts.indexOf("org") + 1);
+    const section = afterOrg[0] ?? "dashboard";
+    const map: Record<string, string> = {
+      dashboard: "Dashboard",
+      profile: "Profile",
+      opportunities: "Opportunities",
+      volunteers: "Volunteer Management",
+      messaging: "Messaging",
+      resources: "Resources",
+      settings: "Settings",
+    };
+    const pretty = map[section] ?? section.replace(/-/g, " ");
+    return pretty.charAt(0).toUpperCase() + pretty.slice(1);
+  }, [pathname]);
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -15,7 +37,7 @@ export default function OrgLayout({ children }: { children: ReactNode }) {
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
           <Separator orientation="vertical" className="mx-2 h-6" />
-          <div className="font-medium">Dashboard</div>
+          <div className="font-medium">{title}</div>
         </header>
         <div className="flex-1 p-4">{children}</div>
       </SidebarInset>
