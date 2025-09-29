@@ -64,6 +64,19 @@ model Organization {
   industry String?
   website  String?
 
+  // Profile fields
+  logoUrl      String?
+  description  String?
+  mission      String?
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  categories   String[]
+  twitter      String?
+  instagram    String?
+  facebook     String?
+  linkedin     String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   /// Events hosted by this organization

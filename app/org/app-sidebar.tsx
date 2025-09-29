@@ -3,7 +3,6 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
 import {
-  IconChartBar,
   IconDashboard,
   IconFileDescription,
   IconFolder,
@@ -44,8 +43,7 @@ const data = {
     { title: "Volunteer Management", url: "/org/volunteers", icon: IconListDetails },
     // 5. Messaging / Communication
     { title: "Messaging", url: "/org/messaging", icon: IconFileDescription },
-    // 6. Analytics / Reports
-    { title: "Analytics", url: "/org/analytics", icon: IconChartBar },
+    
     // 7. Resources / Support
     { title: "Resources", url: "/org/resources", icon: IconHelp },
     // 8. Settings
