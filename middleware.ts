@@ -36,24 +36,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   };
 
-  // If not authenticated, allow public pages; optionally gate private ones here
-  // Determine key route flags
+  // If not authenticated, redirect any non-auth page to signup
+  const onAuthPages = pathname.startsWith("/auth");
+  if (!isAuthed && !onAuthPages) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/auth/signup";
+    url.search = `from=${encodeURIComponent(pathname)}`;
+    return NextResponse.redirect(url);
+  }
+
+  // Determine key route flags (for authenticated flows below)
   const onProfile = pathname.startsWith(PROFILE_PATH);
   const onOrgProfile = pathname.startsWith(ORG_PROFILE_PATH);
   const onOrgStart = pathname.startsWith(ORG_START_PATH);
   const onGenericDashboard = pathname.startsWith(GENERIC_DASHBOARD_PATH);
   const onUserDashboard = pathname.startsWith(USER_DASHBOARD_PATH);
   const onOrgDashboard = pathname.startsWith(ORG_DASHBOARD_PATH);
-  const onAnyDashboard = onGenericDashboard || onUserDashboard || onOrgDashboard;
-  const onAuthPages = pathname === "/auth/signin" || pathname === "/auth/signup" || pathname.startsWith("/auth/signup/");
-
-  // If unauthenticated and accessing protected routes, send to sign-in with return URL
-  if (!isAuthed && (onAnyDashboard || onProfile)) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/auth/signin";
-    url.search = `from=${encodeURIComponent(pathname)}`;
-    return NextResponse.redirect(url);
-  }
 
   // From here on, user is authenticated. Apply completion gating and auth-page redirection
   if (!isAuthed) {
@@ -109,13 +107,8 @@ export async function middleware(req: NextRequest) {
 
 // Configure which paths run through this middleware
 export const config = {
+  // Run on all paths except Next.js internals and static assets (Next.js recommended style)
   matcher: [
-    "/dashboard/:path*",
-    "/user/dashboard/:path*",
-    "/org/dashboard/:path*",
-    "/auth/signup/user/profile",
-    "/auth/signin",
-    "/auth/signup",
-    "/auth/signup/:path*",
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };
