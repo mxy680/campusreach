@@ -22,50 +22,10 @@ type Opportunity = {
   pointsPerHour?: number
 }
 
-const sample: Opportunity[] = [
-  {
-    id: "o1",
-    title: "STEM Tutor (Middle School)",
-    org: "BrightKids",
-    teaser: "Help students with math and science homework.",
-    start: "2025-10-05T20:00:00.000Z",
-    end: "2025-10-05T22:00:00.000Z",
-    location: "Civic Library",
-    need: 8,
-    joined: 3,
-    categories: ["Education"],
-    skills: ["Tutoring", "STEM"],
-    pointsPerHour: 3,
-  },
-  {
-    id: "o2",
-    title: "Park Cleanup Weekend",
-    org: "City Parks",
-    teaser: "Join us to keep our park beautiful.",
-    start: "2025-10-12T14:00:00.000Z",
-    location: "Riverfront Park",
-    need: 25,
-    joined: 7,
-    categories: ["Environment"],
-    skills: ["Teamwork"],
-    pointsPerHour: 2,
-  },
-  {
-    id: "o3",
-    title: "Senior Tech Help Night",
-    org: "Community Center",
-    teaser: "Assist seniors with phones and laptops.",
-    start: "2025-10-07T23:00:00.000Z",
-    location: "Maple Center",
-    need: 6,
-    joined: 2,
-    categories: ["Community"],
-    skills: ["Tech Support", "Patience"],
-    pointsPerHour: 3,
-  },
-]
-
 export default function Page() {
+  const [items, setItems] = React.useState<Opportunity[]>([])
+  const [loading, setLoading] = React.useState(true)
+
   const [query, setQuery] = React.useState("")
   const [radius, setRadius] = React.useState(10)
   const [timeCommit, setTimeCommit] = React.useState("any")
@@ -74,13 +34,33 @@ export default function Page() {
   const [category, setCategory] = React.useState("any")
   const [skillMatch, setSkillMatch] = React.useState(false)
 
+  // Fetch from API whenever basic filters change (server-side filters)
+  React.useEffect(() => {
+    const ctrl = new AbortController()
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (query.trim()) params.set("q", query.trim())
+    if (category !== "any") params.set("category", category)
+    if (from) params.set("from", from)
+    if (to) params.set("to", to)
+    fetch(`/api/user/opportunities?${params.toString()}`, { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        setItems((json?.data ?? []) as Opportunity[])
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+    return () => ctrl.abort()
+  }, [query, category, from, to])
+
   const fmt = (iso: string) => new Date(iso).toLocaleString(undefined, { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })
 
   const filtered = React.useMemo(() => {
-    return sample.filter((o) => {
+    return items.filter((o) => {
       const q = query.trim().toLowerCase()
-      if (q && !(o.title.toLowerCase().includes(q) || o.org.toLowerCase().includes(q) || o.teaser.toLowerCase().includes(q))) return false
-      if (category !== "any" && !o.categories.includes(category)) return false
+      if (q && !(o.title.toLowerCase().includes(q) || o.org.toLowerCase().includes(q) || (o.teaser ?? "").toLowerCase().includes(q))) return false
+      if (category !== "any" && !o.categories?.includes?.(category)) return false
       if (from && new Date(o.start) < new Date(from)) return false
       if (to && new Date(o.start) > new Date(to)) return false
       if (timeCommit === "short" && (o.end ? (new Date(o.end).getTime() - new Date(o.start).getTime())/3600000 > 2 : false)) return false
@@ -89,12 +69,12 @@ export default function Page() {
       if (skillMatch) {
         // pretend the user has skills: ["Tutoring", "Teamwork"]
         const userSkills = new Set(["Tutoring", "Teamwork"]) 
-        const overlap = o.skills.some((s) => userSkills.has(s))
+        const overlap = (o.skills ?? []).some((s) => userSkills.has(s))
         if (!overlap) return false
       }
       return true
     })
-  }, [query, category, from, to, timeCommit, skillMatch])
+  }, [items, query, category, from, to, timeCommit, skillMatch])
 
   return (
     <main className="p-4 space-y-4">
@@ -148,7 +128,12 @@ export default function Page() {
 
       {/* Results */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((o) => (
+        {loading ? (
+          <Card className="md:col-span-2 lg:col-span-3"><CardContent className="p-6 text-center text-sm text-muted-foreground">Loading opportunities…</CardContent></Card>
+        ) : filtered.length === 0 ? (
+          <Card className="md:col-span-2 lg:col-span-3"><CardContent className="p-6 text-center text-sm text-muted-foreground">No opportunities match your filters.</CardContent></Card>
+        ) : (
+          filtered.map((o) => (
           <Card key={o.id} className="overflow-hidden">
             <CardContent className="p-3">
               <div className="mb-1 flex items-start justify-between gap-2">
@@ -200,7 +185,9 @@ export default function Page() {
               </div>
             </CardContent>
           </Card>
-        ))}
+        ))
+        )
+        }
       </div>
     </main>
   )

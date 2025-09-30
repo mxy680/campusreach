@@ -3,9 +3,11 @@ import { prisma } from "@/lib/prisma"
 
 type Row = {
   id: string
-  from: string
+  name: string
+  email: string
   subject: string
   date: string // ISO
+  teaser: string
 }
 
 export async function GET(req: NextRequest) {
@@ -30,16 +32,18 @@ export async function GET(req: NextRequest) {
       id: true,
       subject: true,
       updatedAt: true,
-      organization: { select: { name: true } },
-      messages: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
+      organization: { select: { name: true, contactEmail: true } },
+      messages: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true, body: true } },
     },
   })
 
   const rows: Row[] = convos.map((c) => ({
     id: c.id,
-    from: c.organization?.name ?? "Conversation",
+    name: c.organization?.name ?? "Conversation",
+    email: c.organization?.contactEmail ?? "",
     subject: c.subject,
     date: (c.messages[0]?.createdAt ?? c.updatedAt).toISOString(),
+    teaser: c.messages[0]?.body ?? "",
   }))
 
   return NextResponse.json({ data: rows })

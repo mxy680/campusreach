@@ -4,6 +4,7 @@ import * as React from "react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,15 @@ export default function Page() {
       if (!email) return
       const apiTransport =
         form.transportMode === "provide_others" ? "PROVIDE_OTHERS" : form.transportMode === "rideshare" ? "RIDESHARE" : "SELF_ONLY"
+      // Normalize phone to E.164 if possible
+      const raw = (form.phone || "").replace(/[^0-9+]/g, "")
+      let phoneE164 = raw
+      if (raw && !raw.startsWith("+")) {
+        // Assume US if 10 digits
+        const digits = raw.replace(/\D/g, "")
+        if (digits.length === 10) phoneE164 = "+1" + digits
+        else if (digits.length === 11 && digits.startsWith("1")) phoneE164 = "+" + digits
+      }
       const res = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -61,7 +71,7 @@ export default function Page() {
             school: form.school || undefined,
             major: form.major || undefined,
             gradYear: form.gradYear || undefined,
-            phone: form.phone || undefined,
+            phone: phoneE164 || undefined,
             transportMode: apiTransport,
             radiusMiles: form.radiusMiles,
             transportNotes: form.transportNotes || undefined,
@@ -147,12 +157,61 @@ export default function Page() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="school">School</Label>
-              <Input id="school" placeholder="e.g. CWRU" value={form.school} onChange={(e) => onChange("school", e.target.value)} />
+              <Label>School</Label>
+              <Select value={form.school} onValueChange={(v) => onChange("school", v)}>
+                <SelectTrigger size="default" className="w-full">
+                  <SelectValue placeholder="Select your school" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Case Western Reserve University">Case Western Reserve University</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="major">Major</Label>
-              <Input id="major" placeholder="e.g. Biology" value={form.major} onChange={(e) => onChange("major", e.target.value)} />
+              <Label>Major</Label>
+              <Select value={form.major} onValueChange={(v) => onChange("major", v)}>
+                <SelectTrigger size="default" className="w-full">
+                  <SelectValue placeholder="Select your major" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Accounting">Accounting</SelectItem>
+                  <SelectItem value="Anthropology">Anthropology</SelectItem>
+                  <SelectItem value="Biochemistry">Biochemistry</SelectItem>
+                  <SelectItem value="Biology">Biology</SelectItem>
+                  <SelectItem value="Biomedical Engineering">Biomedical Engineering</SelectItem>
+                  <SelectItem value="Business Administration">Business Administration</SelectItem>
+                  <SelectItem value="Chemical Engineering">Chemical Engineering</SelectItem>
+                  <SelectItem value="Chemistry">Chemistry</SelectItem>
+                  <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
+                  <SelectItem value="Communication">Communication</SelectItem>
+                  <SelectItem value="Computer Engineering">Computer Engineering</SelectItem>
+                  <SelectItem value="Computer Science">Computer Science</SelectItem>
+                  <SelectItem value="Data Science">Data Science</SelectItem>
+                  <SelectItem value="Economics">Economics</SelectItem>
+                  <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                  <SelectItem value="English">English</SelectItem>
+                  <SelectItem value="Entrepreneurship">Entrepreneurship</SelectItem>
+                  <SelectItem value="Environmental Science">Environmental Science</SelectItem>
+                  <SelectItem value="Finance">Finance</SelectItem>
+                  <SelectItem value="History">History</SelectItem>
+                  <SelectItem value="Information Systems">Information Systems</SelectItem>
+                  <SelectItem value="International Studies">International Studies</SelectItem>
+                  <SelectItem value="Management">Management</SelectItem>
+                  <SelectItem value="Marketing">Marketing</SelectItem>
+                  <SelectItem value="Mathematics">Mathematics</SelectItem>
+                  <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
+                  <SelectItem value="Neuroscience">Neuroscience</SelectItem>
+                  <SelectItem value="Nursing">Nursing</SelectItem>
+                  <SelectItem value="Philosophy">Philosophy</SelectItem>
+                  <SelectItem value="Physics">Physics</SelectItem>
+                  <SelectItem value="Political Science">Political Science</SelectItem>
+                  <SelectItem value="Psychology">Psychology</SelectItem>
+                  <SelectItem value="Public Health">Public Health</SelectItem>
+                  <SelectItem value="Sociology">Sociology</SelectItem>
+                  <SelectItem value="Statistics">Statistics</SelectItem>
+                  <SelectItem value="Supply Chain Management">Supply Chain Management</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -161,7 +220,15 @@ export default function Page() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" type="tel" placeholder="(555) 555-5555" value={form.phone} onChange={(e) => onChange("phone", e.target.value)} />
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="(555) 555-5555"
+                pattern="^(\+\d{10,15}|\(?\d{3}\)?[-\.\s]?\d{3}[-\.\s]?\d{4})$"
+                title="Enter a valid phone number (e.g., (555) 555-5555 or +15555555555)"
+                value={form.phone}
+                onChange={(e) => onChange("phone", e.target.value)}
+              />
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -171,7 +238,8 @@ export default function Page() {
                 type="file"
                 accept="image/*"
                 onChange={(e) => onChange("avatarFile", e.target.files?.[0] ?? null)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:text-foreground"
+                disabled
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm opacity-60 cursor-not-allowed file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:text-foreground"
               />
             </div>
 
@@ -238,6 +306,7 @@ export default function Page() {
             <div className="md:col-span-2 flex items-center justify-end gap-2 pt-1">
               <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save profile"}</Button>
             </div>
+            {/* Datalists removed in favor of Select dropdowns */}
           </form>
           )}
         </CardContent>

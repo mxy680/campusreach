@@ -25,6 +25,9 @@ export async function POST(req: Request) {
 
     const gradAt = graduationDate ? new Date(graduationDate) : null;
 
+    // For the CWRU signup flow, school is fixed.
+    const school = "Case Western Reserve University";
+
     await prisma.volunteer.upsert({
       where: { userId: session.user.id },
       create: {
@@ -32,6 +35,7 @@ export async function POST(req: Request) {
         firstName,
         lastName,
         pronouns: pronouns || null,
+        school,
         major: major || null,
         graduationDate: gradAt,
       },
@@ -39,6 +43,7 @@ export async function POST(req: Request) {
         firstName,
         lastName,
         pronouns: pronouns || null,
+        school,
         major: major || null,
         graduationDate: gradAt,
       },

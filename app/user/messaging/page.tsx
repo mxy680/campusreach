@@ -1,44 +1,30 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
-// Sample data (can be wired to API later)
-const mailsData = [
-  {
-    name: "Campus Housing",
-    email: "housing@university.edu",
-    subject: "Move‑In shift details",
-    date: "09:12 AM",
-    teaser:
-      "Thanks for signing up for Move‑In!\nPlease arrive 15 minutes early at North Res Halls. Dress comfortably.",
-  },
-  {
-    name: "BrightKids",
-    email: "volunteer@brightkids.org",
-    subject: "STEM Tutor schedule",
-    date: "Yesterday",
-    teaser:
-      "Could you share your availability this week?\nWe’re planning sessions Tue/Thu evenings.",
-  },
-  {
-    name: "City Parks",
-    email: "events@cityparks.gov",
-    subject: "Park Cleanup logistics",
-    date: "2 days ago",
-    teaser:
-      "Meet at the Riverfront pavilion.\nGloves and bags provided. Water stations on site.",
-  },
-]
+type MailRow = {
+  id: string
+  name: string
+  email: string
+  subject: string
+  date: string // ISO
+  teaser: string
+}
 
 export default function Page() {
+  const { data: session } = useSession()
+  const email = session?.user?.email ?? ""
   const [query, setQuery] = React.useState("")
   const [open, setOpen] = React.useState(false)
-  const [selected, setSelected] = React.useState<typeof mailsData[number] | null>(null)
+  const [selected, setSelected] = React.useState<MailRow | null>(null)
   const [reply, setReply] = React.useState("")
   const [showOriginal, setShowOriginal] = React.useState(false)
+  const [mailsData, setMailsData] = React.useState<MailRow[]>([])
+  const [loading, setLoading] = React.useState(true)
 
   const getInitials = (name: string) =>
     name
@@ -47,6 +33,21 @@ export default function Page() {
       .join("")
       .slice(0, 2)
       .toUpperCase()
+
+  React.useEffect(() => {
+    if (!email) return
+    const ctrl = new AbortController()
+    setLoading(true)
+    fetch(`/api/user/messages?email=${encodeURIComponent(email)}`, { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        setMailsData((json?.data ?? []) as MailRow[])
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+    return () => ctrl.abort()
+  }, [email])
 
   const mails = React.useMemo(() => {
     if (!query) return mailsData
@@ -58,7 +59,7 @@ export default function Page() {
         m.subject.toLowerCase().includes(q) ||
         m.teaser.toLowerCase().includes(q)
     )
-  }, [query])
+  }, [query, mailsData])
 
   return (
     <div className="flex min-h-[600px] flex-1 flex-col">
@@ -76,7 +77,12 @@ export default function Page() {
         </div>
       </div>
       <ul className="divide-y rounded-md border">
-        {mails.map((mail) => (
+        {loading ? (
+          <li className="p-4 text-sm text-muted-foreground">Loading messages…</li>
+        ) : mails.length === 0 ? (
+          <li className="p-6 text-center text-sm text-muted-foreground">No messages</li>
+        ) : (
+        mails.map((mail) => (
           <li
             key={mail.email}
             className="group cursor-pointer p-3 md:p-4 transition hover:bg-muted/40"
@@ -94,7 +100,7 @@ export default function Page() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{mail.name}</span>
-                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">{mail.date}</span>
+                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">{new Date(mail.date).toLocaleString()}</span>
                 </div>
                 <div className="truncate text-sm">{mail.subject}</div>
                 <div className="text-xs text-muted-foreground whitespace-break-spaces line-clamp-2">
@@ -103,7 +109,8 @@ export default function Page() {
               </div>
             </div>
           </li>
-        ))}
+        ))
+        )}
       </ul>
 
       <Dialog open={open} onOpenChange={setOpen}>

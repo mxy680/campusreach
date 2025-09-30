@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 export default function Page() {
   const [firstName, setFirstName] = useState("");
@@ -81,7 +82,49 @@ export default function Page() {
 
                 <div className="space-y-2">
                   <Label htmlFor="major">Major</Label>
-                  <Input id="major" name="major" placeholder="e.g., Computer Science" value={major} onChange={(e) => setMajor(e.target.value)} required />
+                  <Select value={major} onValueChange={(v) => setMajor(v)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select your major" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Accounting">Accounting</SelectItem>
+                      <SelectItem value="Anthropology">Anthropology</SelectItem>
+                      <SelectItem value="Biochemistry">Biochemistry</SelectItem>
+                      <SelectItem value="Biology">Biology</SelectItem>
+                      <SelectItem value="Biomedical Engineering">Biomedical Engineering</SelectItem>
+                      <SelectItem value="Business Administration">Business Administration</SelectItem>
+                      <SelectItem value="Chemical Engineering">Chemical Engineering</SelectItem>
+                      <SelectItem value="Chemistry">Chemistry</SelectItem>
+                      <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
+                      <SelectItem value="Communication">Communication</SelectItem>
+                      <SelectItem value="Computer Engineering">Computer Engineering</SelectItem>
+                      <SelectItem value="Computer Science">Computer Science</SelectItem>
+                      <SelectItem value="Data Science">Data Science</SelectItem>
+                      <SelectItem value="Economics">Economics</SelectItem>
+                      <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                      <SelectItem value="English">English</SelectItem>
+                      <SelectItem value="Entrepreneurship">Entrepreneurship</SelectItem>
+                      <SelectItem value="Environmental Science">Environmental Science</SelectItem>
+                      <SelectItem value="Finance">Finance</SelectItem>
+                      <SelectItem value="History">History</SelectItem>
+                      <SelectItem value="Information Systems">Information Systems</SelectItem>
+                      <SelectItem value="International Studies">International Studies</SelectItem>
+                      <SelectItem value="Management">Management</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Mathematics">Mathematics</SelectItem>
+                      <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
+                      <SelectItem value="Neuroscience">Neuroscience</SelectItem>
+                      <SelectItem value="Nursing">Nursing</SelectItem>
+                      <SelectItem value="Philosophy">Philosophy</SelectItem>
+                      <SelectItem value="Physics">Physics</SelectItem>
+                      <SelectItem value="Political Science">Political Science</SelectItem>
+                      <SelectItem value="Psychology">Psychology</SelectItem>
+                      <SelectItem value="Public Health">Public Health</SelectItem>
+                      <SelectItem value="Sociology">Sociology</SelectItem>
+                      <SelectItem value="Statistics">Statistics</SelectItem>
+                      <SelectItem value="Supply Chain Management">Supply Chain Management</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
