@@ -5,6 +5,9 @@ import { useSession } from "next-auth/react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
 type MailRow = {
   id: string
@@ -25,6 +28,9 @@ export default function Page() {
   const [showOriginal, setShowOriginal] = React.useState(false)
   const [mailsData, setMailsData] = React.useState<MailRow[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [composeOpen, setComposeOpen] = React.useState(false)
+  const [orgs, setOrgs] = React.useState<{ id: string; name: string }[]>([])
+  const [compose, setCompose] = React.useState<{ orgId: string; subject: string; body: string }>({ orgId: "", subject: "", body: "" })
 
   const getInitials = (name: string) =>
     name
@@ -48,6 +54,19 @@ export default function Page() {
       .finally(() => setLoading(false))
     return () => ctrl.abort()
   }, [email])
+
+  // Load orgs for compose
+  React.useEffect(() => {
+    const ctrl = new AbortController()
+    fetch(`/api/orgs`, { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        setOrgs((json?.data ?? []) as { id: string; name: string }[])
+      })
+      .catch(() => {})
+    return () => ctrl.abort()
+  }, [])
 
   const mails = React.useMemo(() => {
     if (!query) return mailsData
@@ -75,6 +94,7 @@ export default function Page() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+        <Button size="sm" onClick={() => { setCompose({ orgId: "", subject: "", body: "" }); setComposeOpen(true) }}>New message</Button>
       </div>
       <ul className="divide-y rounded-md border">
         {loading ? (
@@ -175,6 +195,72 @@ export default function Page() {
                   setOpen(false)
                 }}
                 disabled={!reply.trim()}
+              >
+                Send
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Compose dialog */}
+      <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+        <DialogContent className="max-w-md p-5">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-lg">New message</DialogTitle>
+            <DialogDescription className="truncate text-xs">Send a message to an organization</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Organization</Label>
+              <Select value={compose.orgId} onValueChange={(v) => setCompose((c) => ({ ...c, orgId: v }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgs.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Subject</Label>
+              <Input value={compose.subject} onChange={(e) => setCompose((c) => ({ ...c, subject: e.target.value }))} placeholder="Subject" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Message</Label>
+              <textarea
+                className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={compose.body}
+                onChange={(e) => setCompose((c) => ({ ...c, body: e.target.value }))}
+                placeholder="Write your message..."
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setComposeOpen(false)}>Cancel</Button>
+              <Button
+                disabled={!compose.orgId || !compose.subject.trim() || !compose.body.trim()}
+                onClick={async () => {
+                  if (!email) return
+                  const r = await fetch(`/api/user/messages`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, orgId: compose.orgId, subject: compose.subject.trim(), body: compose.body.trim() }),
+                  })
+                  if (!r.ok) {
+                    toast("Failed to send", { description: "Please try again." })
+                    return
+                  }
+                  toast("Message sent")
+                  setComposeOpen(false)
+                  // refresh inbox
+                  const ref = await fetch(`/api/user/messages?email=${encodeURIComponent(email)}`)
+                  if (ref.ok) {
+                    const json = await ref.json()
+                    setMailsData((json?.data ?? []) as MailRow[])
+                  }
+                }}
               >
                 Send
               </Button>
