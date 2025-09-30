@@ -52,7 +52,7 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="px-3 pt-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
@@ -64,7 +64,7 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="px-2">
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.title}>
@@ -78,7 +78,7 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="px-3 pb-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-accent">
