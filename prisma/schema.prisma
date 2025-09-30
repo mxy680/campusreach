@@ -8,15 +8,18 @@ generator client {
 }
 
 model User {
-  id             String     @id @default(cuid())
+  id             String                  @id @default(cuid())
   name           String?
-  email          String     @unique
+  email          String                  @unique
   emailVerified  DateTime?
   image          String?
   accounts       Account[]
   volunteer      Volunteer?
-  role           Role       @default(VOLUNTEER)
+  role           Role                    @default(VOLUNTEER)
   hashedPassword String?
+  notifications  NotificationPreference?
+  conversations  Conversation[]
+  messages       Message[]               @relation("UserMessages")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -56,6 +59,13 @@ enum Role {
   ORGANIZATION
 }
 
+/// Transportation options for volunteers
+enum TransportMode {
+  PROVIDE_OTHERS /// can provide rides for self and others (carpool)
+  SELF_ONLY /// can drive self only
+  RIDESHARE /// accept CampusReach-provided rideshare
+}
+
 /// Organizations that can be created on Campus Reach
 model Organization {
   id       String  @id @default(cuid())
@@ -77,10 +87,16 @@ model Organization {
   facebook     String?
   linkedin     String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   /// Events hosted by this organization
-  events    Event[]
+  events        Event[]
+  /// Resources published by this organization
+  resources     Resource[]
+  /// Conversations with volunteers
+  conversations Conversation[]
+  /// Messages sent from this organization
+  orgMessages   Message[]      @relation("OrgMessages")
 }
 
 /// Volunteer profile associated to a User and optionally to an Organization
@@ -92,11 +108,21 @@ model Volunteer {
   firstName      String
   lastName       String
   pronouns       String?
+  school         String?
   major          String?
   graduationDate DateTime?
+  phone          String?
+
+  // Transportation preferences
+  transportMode  TransportMode @default(SELF_ONLY)
+  radiusMiles    Int           @default(10)
+  transportNotes String?
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signups       EventSignup[]
+  conversations Conversation[]
+  timeEntries   TimeEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -112,12 +138,127 @@ model Event {
   title            String
   shortDescription String?
   startsAt         DateTime
+  endsAt           DateTime?
+  location         String        @default("TBD")
   volunteersNeeded Int
+  pointsPerHour    Int?
 
   // Optional, stored as scalar lists
   attachments String[] // e.g. URLs to uploaded files
   specialties String[] // desired specialties/majors
 
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  // Signups
+  signups   EventSignup[]
+  timeEntries TimeEntry[]
+}
+
+/// A volunteer signing up for an event
+model EventSignup {
+  id          String       @id @default(cuid())
+  eventId     String
+  volunteerId String
+  status      SignupStatus @default(CONFIRMED)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, volunteerId])
+}
+
+enum SignupStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+/// A conversation between a volunteer (user) and an organization
+model Conversation {
+  id              String  @id @default(cuid())
+  subject         String
+  volunteerId     String?
+  organizationId  String?
+  createdByUserId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  volunteer    Volunteer?    @relation(fields: [volunteerId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdBy    User          @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  messages     Message[]
+}
+
+/// Individual messages within a conversation
+model Message {
+  id             String  @id @default(cuid())
+  conversationId String
+  fromUserId     String? // when sent by a user
+  fromOrgId      String? // when sent by an org system user
+  body           String
+
+  createdAt DateTime @default(now())
+
+  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  fromUser     User?         @relation("UserMessages", fields: [fromUserId], references: [id], onDelete: SetNull)
+  fromOrg      Organization? @relation("OrgMessages", fields: [fromOrgId], references: [id], onDelete: SetNull)
+}
+
+/// Learning materials and links
+model Resource {
+  id             String       @id @default(cuid())
+  title          String
+  kind           ResourceKind
+  description    String?
+  url            String
+  size           String?
+  duration       String?
+  tags           String[]
+  organizationId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+}
+
+enum ResourceKind {
+  PDF
+  LINK
+  VIDEO
+}
+
+/// Per-user notification preferences
+model NotificationPreference {
+  userId       String  @id
+  emailUpdates Boolean @default(true)
+  pushEnabled  Boolean @default(false)
+  weeklyDigest Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Logged hours for a volunteer (optionally tied to an event)
+model TimeEntry {
+  id           String     @id @default(cuid())
+  volunteerId  String
+  eventId      String?
+  date         DateTime   // when the volunteering occurred
+  hours        Decimal    // number of hours (e.g., 1.5)
+  notes        String?
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  volunteer    Volunteer  @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  event        Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([volunteerId, date])
 }

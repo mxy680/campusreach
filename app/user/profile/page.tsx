@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -20,6 +22,8 @@ type ProfileForm = {
 }
 
 export default function Page() {
+  const { data: session } = useSession()
+  const email = session?.user?.email ?? ""
   const [form, setForm] = React.useState<ProfileForm>({
     firstName: "",
     lastName: "",
@@ -33,6 +37,7 @@ export default function Page() {
     transportNotes: "",
   })
   const [saving, setSaving] = React.useState(false)
+  const [loading, setLoading] = React.useState(true)
 
   const onChange = (key: keyof ProfileForm, value: string | number | boolean | File | null) => {
     setForm((f) => ({ ...f, [key]: value }))
@@ -42,13 +47,83 @@ export default function Page() {
     e.preventDefault()
     try {
       setSaving(true)
-      // TODO: Wire to API
-      await new Promise((r) => setTimeout(r, 600))
-      alert("Profile saved (demo)")
+      if (!email) return
+      const apiTransport =
+        form.transportMode === "provide_others" ? "PROVIDE_OTHERS" : form.transportMode === "rideshare" ? "RIDESHARE" : "SELF_ONLY"
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          profile: {
+            firstName: form.firstName,
+            lastName: form.lastName,
+            school: form.school || undefined,
+            major: form.major || undefined,
+            gradYear: form.gradYear || undefined,
+            phone: form.phone || undefined,
+            transportMode: apiTransport,
+            radiusMiles: form.radiusMiles,
+            transportNotes: form.transportNotes || undefined,
+          },
+        }),
+      })
+      if (!res.ok) {
+        console.error("Save failed", await res.text())
+        toast("Failed to save profile", {
+          description: "Please try again.",
+        })
+        return
+      }
+      toast("Profile saved", {
+        description: "Your changes have been saved.",
+      })
     } finally {
       setSaving(false)
     }
   }
+
+  React.useEffect(() => {
+    if (!email) return
+    const ctrl = new AbortController()
+    setLoading(true)
+    fetch(`/api/user/profile?email=${encodeURIComponent(email)}`, { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        const p = json?.profile as
+          | {
+              firstName: string
+              lastName: string
+              school?: string
+              major?: string
+              gradYear?: string
+              phone?: string
+              transportMode: "PROVIDE_OTHERS" | "SELF_ONLY" | "RIDESHARE"
+              radiusMiles: number
+              transportNotes?: string
+            }
+          | null
+        if (p) {
+          setForm((f) => ({
+            ...f,
+            firstName: p.firstName ?? "",
+            lastName: p.lastName ?? "",
+            school: p.school ?? "",
+            major: p.major ?? "",
+            gradYear: p.gradYear ?? "",
+            phone: p.phone ?? "",
+            transportMode:
+              p.transportMode === "PROVIDE_OTHERS" ? "provide_others" : p.transportMode === "RIDESHARE" ? "rideshare" : "self_only",
+            radiusMiles: p.radiusMiles ?? 5,
+            transportNotes: p.transportNotes ?? "",
+          }))
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+    return () => ctrl.abort()
+  }, [email])
 
   return (
     <main className="p-4">
@@ -58,6 +133,9 @@ export default function Page() {
           <CardDescription>Keep your volunteer information up to date.</CardDescription>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : (
           <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="first">First name</Label>
@@ -161,6 +239,7 @@ export default function Page() {
               <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save profile"}</Button>
             </div>
           </form>
+          )}
         </CardContent>
       </Card>
     </main>

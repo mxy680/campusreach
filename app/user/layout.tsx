@@ -3,6 +3,7 @@
 import { ReactNode, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { SessionProvider } from "next-auth/react";
+import { Toaster } from "@/components/ui/sonner";
 import { UserAppSidebar } from "./app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -37,6 +38,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
             <div className="font-medium">{title}</div>
           </header>
           <div className="flex-1 p-4">{children}</div>
+          <Toaster position="top-right" richColors />
         </SidebarInset>
       </SidebarProvider>
     </SessionProvider>
