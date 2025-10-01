@@ -1,24 +1,41 @@
 import { NextRequest, NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 // Return upcoming events with optional filters
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const q = (searchParams.get("q") || "").trim()
-  // const category = searchParams.get("category") || "any"
   const from = searchParams.get("from")
   const to = searchParams.get("to")
-  // timeCommit is currently handled client-side because duration may be missing
-  // const timeCommit = searchParams.get("timeCommit")
+  const timeCommit = (searchParams.get("timeCommit") || "any").toLowerCase()
 
-  const now = new Date()
+  // Determine current volunteer (if logged in) to compute alreadyJoined
+  const session = await getServerSession(authOptions)
+  const userId = session?.user?.id || null
+  const vol = userId ? await prisma.volunteer.findUnique({ where: { userId }, select: { id: true } }) : null
+  const myVolunteerId = vol?.id || null
 
-  const startsAt: Prisma.DateTimeFilter = { gte: from ? new Date(from) : now }
-  if (to) {
-    startsAt.lte = new Date(to)
+  const where: Prisma.EventWhereInput = {}
+  {
+    const startsAt: Prisma.DateTimeFilter = {}
+    if (from) {
+      startsAt.gte = new Date(from)
+    } else {
+      // Default: hide past events
+      startsAt.gte = new Date()
+    }
+    if (to) startsAt.lte = new Date(to)
+    where.startsAt = startsAt
   }
-  const where: Prisma.EventWhereInput = { startsAt }
+  // Apply server-side filter for integer time commitment hours if requested
+  if (timeCommit === "short") {
+    where.timeCommitmentHours = { lte: 2 }
+  } else if (timeCommit === "halfday") {
+    where.timeCommitmentHours = { lte: 5 }
+  }
 
   if (q) {
     where.OR = [
@@ -27,38 +44,79 @@ export async function GET(req: NextRequest) {
       // Add description or other fields here if present in the schema
     ]
   }
-  // Note: category filtering is client-side until Event has categories in the schema
+  // Category filter against Event.categories (event-specific)
+  // categories removed from schema; keeping param for forward compatibility but not filtering
 
-  const events = await prisma.event.findMany({
-    where,
-    orderBy: { startsAt: "asc" },
-    take: 60,
-    select: {
-      id: true,
-      title: true,
-      startsAt: true,
-      // endsAt may not exist in schema; if it does, add it here
-      location: true,
-      volunteersNeeded: true,
-      organization: { select: { name: true } },
-      _count: { select: { signups: true } },
-    },
-  })
+  if (myVolunteerId) {
+    const events = await prisma.event.findMany({
+      where,
+      orderBy: { startsAt: "asc" },
+      take: 60,
+      include: {
+        organization: { select: { name: true, categories: true } },
+        _count: { select: { signups: true } },
+        signups: { where: { volunteerId: myVolunteerId }, select: { id: true } },
+      },
+    })
 
-  const rows = events.map((e) => ({
-    id: e.id,
-    title: e.title,
-    org: e.organization?.name ?? "",
-    teaser: "",
-    start: e.startsAt.toISOString(),
-    end: undefined as string | undefined,
-    location: e.location,
-    need: e.volunteersNeeded,
-    joined: e._count.signups,
-    categories: [] as string[],
-    skills: [] as string[],
-    pointsPerHour: undefined as number | undefined,
-  }))
+    const rows = events.map((e) => ({
+      id: e.id,
+      title: e.title,
+      org: e.organization?.name ?? "",
+      teaser: (e.shortDescription ?? "").replace(/Location:\s*[^\n]+/i, "").trim(),
+      start: e.startsAt.toISOString(),
+      end: e.endsAt ? e.endsAt.toISOString() : undefined,
+      location: (() => {
+        const loc = (e.location ?? "").trim()
+        if (!loc || loc.toUpperCase() === "TBD") {
+          const m = /Location:\s*([^\n]+)/i.exec(e.shortDescription ?? "")
+          return (m?.[1]?.trim() || loc)
+        }
+        return loc
+      })(),
+      need: e.volunteersNeeded,
+      joined: e._count.signups,
+      skills: (e.specialties ?? []) as string[],
+      hours: e.timeCommitmentHours ?? undefined,
+      notes: e.notes ?? undefined,
+      alreadyJoined: (e.signups ?? []).length > 0,
+    }))
 
-  return NextResponse.json({ data: rows })
+    return NextResponse.json({ data: rows })
+  } else {
+    const events = await prisma.event.findMany({
+      where,
+      orderBy: { startsAt: "asc" },
+      take: 60,
+      include: {
+        organization: { select: { name: true, categories: true } },
+        _count: { select: { signups: true } },
+      },
+    })
+
+    const rows = events.map((e) => ({
+      id: e.id,
+      title: e.title,
+      org: e.organization?.name ?? "",
+      teaser: (e.shortDescription ?? "").replace(/Location:\s*[^\n]+/i, "").trim(),
+      start: e.startsAt.toISOString(),
+      end: e.endsAt ? e.endsAt.toISOString() : undefined,
+      location: (() => {
+        const loc = (e.location ?? "").trim()
+        if (!loc || loc.toUpperCase() === "TBD") {
+          const m = /Location:\s*([^\n]+)/i.exec(e.shortDescription ?? "")
+          return (m?.[1]?.trim() || loc)
+        }
+        return loc
+      })(),
+      need: e.volunteersNeeded,
+      joined: e._count.signups,
+      skills: (e.specialties ?? []) as string[],
+      hours: e.timeCommitmentHours ?? undefined,
+      notes: e.notes ?? undefined,
+      alreadyJoined: false,
+    }))
+
+    return NextResponse.json({ data: rows })
+  }
 }

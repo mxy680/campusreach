@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
       id: true,
       name: true,
       email: true,
+      image: true,
       volunteer: {
         select: {
           id: true,
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   const v = user.volunteer
   return NextResponse.json({
-    user: { id: user.id, name: user.name, email: user.email },
+    user: { id: user.id, name: user.name, email: user.email, image: user.image ?? null },
     profile: v
       ? {
           firstName: v.firstName,

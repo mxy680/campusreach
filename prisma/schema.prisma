@@ -3,6 +3,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -141,7 +142,8 @@ model Event {
   endsAt           DateTime?
   location         String        @default("TBD")
   volunteersNeeded Int
-  pointsPerHour    Int?
+  notes            String?
+  timeCommitmentHours Int?
 
   // Optional, stored as scalar lists
   attachments String[] // e.g. URLs to uploaded files

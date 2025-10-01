@@ -48,7 +48,23 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
   const { data: session } = useSession()
   const name = session?.user?.name ?? "Volunteer"
   const email = session?.user?.email ?? ""
-  const avatar = ((session?.user as { image?: string } | undefined)?.image) ?? "/avatars/shadcn.jpg"
+  const [avatar, setAvatar] = React.useState<string>(
+    ((session?.user as { image?: string } | undefined)?.image) ?? "/avatars/shadcn.jpg"
+  )
+
+  React.useEffect(() => {
+    if (!email) return
+    const ctrl = new AbortController()
+    fetch(`/api/user/profile?email=${encodeURIComponent(email)}`, { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        const img = json?.user?.image as string | null | undefined
+        if (img) setAvatar(img)
+      })
+      .catch(() => {})
+    return () => ctrl.abort()
+  }, [email])
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -82,7 +98,7 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-accent">
-              <Avatar className="h-8 w-8 rounded-lg grayscale">
+              <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={avatar} alt={name} />
                 <AvatarFallback className="rounded-lg">VL</AvatarFallback>
               </Avatar>

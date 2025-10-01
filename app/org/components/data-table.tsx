@@ -49,6 +49,7 @@ import { z } from "zod"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 // removed chart components as they are not used in this variant
 // removed Checkbox (no selection or accepted columns)
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -75,7 +76,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type TableMeta = {
-  deleteRow: (id: number) => void
+  deleteRow: (row: z.infer<typeof schema>) => void
 }
 
 // Deterministic date formatting (UTC, locale-independent) to avoid hydration mismatches
@@ -103,6 +104,7 @@ function formatDateTimeUTC(iso?: string | null): string {
 
 export const schema = z.object({
   id: z.number(),
+  volunteerId: z.string().optional().nullable(),
   volunteerName: z.string(),
   pronouns: z.string().optional().nullable(),
   major: z.string().optional().nullable(),
@@ -265,7 +267,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
           variant="outline"
           size="icon"
           className="size-7"
-          onClick={() => (table.options.meta as unknown as TableMeta)?.deleteRow?.(row.original.id)}
+          onClick={() => (table.options.meta as unknown as TableMeta)?.deleteRow?.(row.original)}
           aria-label="Delete row"
         >
           <IconTrash className="size-4" />
@@ -368,8 +370,23 @@ export function DataTable({
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
     meta: {
-      deleteRow: (id: number) => {
-        setRows((prev: Array<z.infer<typeof schema>>) => prev.filter((r) => r.id !== id))
+      deleteRow: async (row: z.infer<typeof schema>) => {
+        try {
+          if (!row.volunteerId) {
+            toast.error("Missing volunteer id")
+            return
+          }
+          const res = await fetch("/api/org/volunteers", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventId: eventValue, volunteerId: row.volunteerId }),
+          })
+          if (!res.ok) throw new Error("Failed to remove volunteer")
+          setRows((prev: Array<z.infer<typeof schema>>) => prev.filter((r) => r.id !== row.id))
+          toast.success("Volunteer removed")
+        } catch {
+          toast.error("Could not remove volunteer")
+        }
       },
     },
     getCoreRowModel: getCoreRowModel(),
@@ -576,7 +593,7 @@ export function DataTable({
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={columns.length}
+                      colSpan={table.getVisibleLeafColumns().length}
                       className="h-24 text-center"
                     >
                       No results.

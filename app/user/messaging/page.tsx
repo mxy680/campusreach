@@ -96,42 +96,42 @@ export default function Page() {
         </div>
         <Button size="sm" onClick={() => { setCompose({ orgId: "", subject: "", body: "" }); setComposeOpen(true) }}>New message</Button>
       </div>
-      <ul className="divide-y rounded-md border">
-        {loading ? (
+      {loading ? (
+        <ul className="divide-y rounded-md border">
           <li className="p-4 text-sm text-muted-foreground">Loading messages…</li>
-        ) : mails.length === 0 ? (
-          <li className="p-6 text-center text-sm text-muted-foreground">No messages</li>
-        ) : (
-        mails.map((mail) => (
-          <li
-            key={mail.email}
-            className="group cursor-pointer p-3 md:p-4 transition hover:bg-muted/40"
-            onClick={() => {
-              setSelected(mail)
-              setReply("")
-              setShowOriginal(false)
-              setOpen(true)
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="bg-muted text-foreground/80 flex size-8 select-none items-center justify-center rounded-full text-xs font-medium">
-                {getInitials(mail.name)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-medium">{mail.name}</span>
-                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">{new Date(mail.date).toLocaleString()}</span>
+        </ul>
+      ) : mails.length > 0 ? (
+        <ul className="divide-y rounded-md border">
+          {mails.map((mail) => (
+            <li
+              key={mail.email}
+              className="group cursor-pointer p-3 md:p-4 transition hover:bg-muted/40"
+              onClick={() => {
+                setSelected(mail)
+                setReply("")
+                setShowOriginal(false)
+                setOpen(true)
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="bg-muted text-foreground/80 flex size-8 select-none items-center justify-center rounded-full text-xs font-medium">
+                  {getInitials(mail.name)}
                 </div>
-                <div className="truncate text-sm">{mail.subject}</div>
-                <div className="text-xs text-muted-foreground whitespace-break-spaces line-clamp-2">
-                  {mail.teaser}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{mail.name}</span>
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">{new Date(mail.date).toLocaleString()}</span>
+                  </div>
+                  <div className="truncate text-sm">{mail.subject}</div>
+                  <div className="text-xs text-muted-foreground whitespace-break-spaces line-clamp-2">
+                    {mail.teaser}
+                  </div>
                 </div>
               </div>
-            </div>
-          </li>
-        ))
-        )}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md p-5">

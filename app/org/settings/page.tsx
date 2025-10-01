@@ -11,11 +11,28 @@ export default function Page() {
   // Account info
   const [orgName, setOrgName] = React.useState("")
   const [orgEmail, setOrgEmail] = React.useState("")
+  const [loading, setLoading] = React.useState(true)
+  const [saving, setSaving] = React.useState(false)
 
   // Password
   const [currPassword, setCurrPassword] = React.useState("")
   const [newPassword, setNewPassword] = React.useState("")
   const [confirmPassword, setConfirmPassword] = React.useState("")
+
+  React.useEffect(() => {
+    const ctrl = new AbortController()
+    setLoading(true)
+    fetch("/api/org/settings", { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        setOrgName(json?.name ?? "")
+        setOrgEmail(json?.contactEmail ?? "")
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+    return () => ctrl.abort()
+  }, [])
 
   return (
     <main className="p-4">
@@ -32,19 +49,33 @@ export default function Page() {
             className="grid grid-cols-1 gap-4 md:grid-cols-2"
             onSubmit={(e) => {
               e.preventDefault()
-              // TODO: wire to API
+              ;(async () => {
+                try {
+                  setSaving(true)
+                  const r = await fetch("/api/org/settings", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: orgName.trim(), contactEmail: orgEmail.trim() }),
+                  })
+                  if (!r.ok) return
+                } finally {
+                  setSaving(false)
+                }
+              })()
             }}
           >
             <div className="space-y-2">
               <Label htmlFor="org-name">Organization name</Label>
-              <Input id="org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Your Organization" />
+              <Input id="org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Your Organization" disabled={loading || saving} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="org-email">Contact email</Label>
-              <Input id="org-email" type="email" value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} placeholder="contact@org.org" />
+              <Input id="org-email" type="email" value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} placeholder="contact@org.org" disabled={loading || saving} />
             </div>
             <div className="md:col-span-2 flex justify-end pt-2">
-              <Button type="submit">Save account</Button>
+              <Button type="submit" disabled={loading || saving || !orgName.trim() || !orgEmail.trim()}>
+                {saving ? "Saving..." : "Save account"}
+              </Button>
             </div>
           </form>
             </CardContent>

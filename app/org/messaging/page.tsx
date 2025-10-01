@@ -4,57 +4,20 @@ import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
-// Sample data (can be wired to API later)
-const mailsData = [
-    {
-      name: "William Smith",
-      email: "williamsmith@example.com",
-      subject: "Meeting Tomorrow",
-      date: "09:34 AM",
-      teaser:
-        "Hi team, just a reminder about our meeting tomorrow at 10 AM.\nPlease come prepared with your project updates.",
-    },
-    {
-      name: "Alice Smith",
-      email: "alicesmith@example.com",
-      subject: "Re: Project Update",
-      date: "Yesterday",
-      teaser:
-        "Thanks for the update. The progress looks great so far.\nLet's schedule a call to discuss the next steps.",
-    },
-    {
-      name: "Bob Johnson",
-      email: "bobjohnson@example.com",
-      subject: "Weekend Plans",
-      date: "2 days ago",
-      teaser:
-        "Hey everyone! I'm thinking of organizing a team outing this weekend.\nWould you be interested in a hiking trip or a beach day?",
-    },
-    {
-      name: "Emily Davis",
-      email: "emilydavis@example.com",
-      subject: "Re: Question about Budget",
-      date: "2 days ago",
-      teaser:
-        "I've reviewed the budget numbers you sent over.\nCan we set up a quick call to discuss some potential adjustments?",
-    },
-    {
-      name: "Michael Wilson",
-      email: "michaelwilson@example.com",
-      subject: "Important Announcement",
-      date: "1 week ago",
-      teaser:
-        "Please join us for an all-hands meeting this Friday at 3 PM.\nWe have some exciting news to share about the company's future.",
-    },
-]
+type MailRow = { id: string; name: string; email: string; subject: string; date: string; teaser: string }
 
 export default function Page() {
   const [query, setQuery] = React.useState("")
   const [open, setOpen] = React.useState(false)
-  const [selected, setSelected] = React.useState<typeof mailsData[number] | null>(null)
+  const [selected, setSelected] = React.useState<MailRow | null>(null)
   const [reply, setReply] = React.useState("")
   const [showOriginal, setShowOriginal] = React.useState(false)
+  const [mailsData, setMailsData] = React.useState<MailRow[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [composeOpen, setComposeOpen] = React.useState(false)
+  const [compose, setCompose] = React.useState<{ email: string; subject: string; body: string }>({ email: "", subject: "", body: "" })
   const getInitials = (name: string) =>
     name
       .split(" ")
@@ -62,6 +25,20 @@ export default function Page() {
       .join("")
       .slice(0, 2)
       .toUpperCase()
+  React.useEffect(() => {
+    const ctrl = new AbortController()
+    setLoading(true)
+    fetch(`/api/org/messages`, { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        setMailsData((json?.data ?? []) as MailRow[])
+      })
+      .catch(() => { })
+      .finally(() => setLoading(false))
+    return () => ctrl.abort()
+  }, [])
+
   const mails = React.useMemo(() => {
     if (!query) return mailsData
     const q = query.toLowerCase()
@@ -72,7 +49,7 @@ export default function Page() {
         m.subject.toLowerCase().includes(q) ||
         m.teaser.toLowerCase().includes(q)
     )
-  }, [query])
+  }, [query, mailsData])
 
   return (
     <div className="flex min-h-[600px] flex-1 flex-col">
@@ -89,36 +66,47 @@ export default function Page() {
           />
         </div>
       </div>
-      <ul className="divide-y rounded-md border">
-        {mails.map((mail) => (
-          <li
-            key={mail.email}
-            className="group cursor-pointer p-3 md:p-4 hover:bg-muted/40 transition"
-            onClick={() => {
-              setSelected(mail)
-              setReply("")
-              setShowOriginal(false)
-              setOpen(true)
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="bg-muted text-foreground/80 flex size-8 select-none items-center justify-center rounded-full text-xs font-medium">
-                {getInitials(mail.name)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-medium">{mail.name}</span>
-                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">{mail.date}</span>
+      {loading ? (
+        <ul className="divide-y rounded-md border">
+          <li className="p-4 text-sm text-muted-foreground">Loading messages…</li>
+        </ul>
+      ) : mails.length > 0 ? (
+        <ul className="divide-y rounded-md border">
+          {mails.map((mail) => (
+            <li
+              key={mail.id}
+              className="group cursor-pointer p-3 md:p-4 hover:bg-muted/40 transition"
+              onClick={() => {
+                setSelected(mail)
+                setReply("")
+                setShowOriginal(false)
+                setOpen(true)
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="bg-muted text-foreground/80 flex size-8 select-none items-center justify-center rounded-full text-xs font-medium">
+                  {getInitials(mail.name)}
                 </div>
-                <div className="truncate text-sm">{mail.subject}</div>
-                <div className="text-xs text-muted-foreground whitespace-break-spaces line-clamp-2">
-                  {mail.teaser}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{mail.name}</span>
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">{new Date(mail.date).toLocaleString()}</span>
+                  </div>
+                  <div className="truncate text-sm">{mail.subject}</div>
+                  <div className="text-xs text-muted-foreground whitespace-break-spaces line-clamp-2">
+                    {mail.teaser}
+                  </div>
                 </div>
               </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="rounded-lg border p-8 text-center">
+          <p className="mb-3 text-sm text-muted-foreground">Your inbox is empty.</p>
+          <Button onClick={() => { setCompose({ email: "", subject: "", body: "" }); setComposeOpen(true) }}>Send a message</Button>
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md p-5">
@@ -140,7 +128,7 @@ export default function Page() {
                   <span className="mx-1">•</span>
                   <span className="truncate align-middle">{selected.email}</span>
                 </div>
-                <span className="ml-auto shrink-0">{selected.date}</span>
+                <span className="ml-auto shrink-0">{new Date(selected.date).toLocaleString()}</span>
               </div>
             )}
             {/* Toggle quoted message */}
@@ -187,6 +175,34 @@ export default function Page() {
               >
                 Send
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Compose dialog */}
+      <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+        <DialogContent className="max-w-md p-5">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-lg">New message</DialogTitle>
+            <DialogDescription className="truncate text-xs">Start a conversation with a volunteer</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="compose-email">Volunteer email</Label>
+              <Input id="compose-email" value={compose.email} onChange={(e) => setCompose((c) => ({ ...c, email: e.target.value }))} placeholder="volunteer@example.com" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="compose-subject">Subject</Label>
+              <Input id="compose-subject" value={compose.subject} onChange={(e) => setCompose((c) => ({ ...c, subject: e.target.value }))} placeholder="Subject" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="compose-body">Message</Label>
+              <textarea id="compose-body" className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={compose.body} onChange={(e) => setCompose((c) => ({ ...c, body: e.target.value }))} placeholder="Write your message..." />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setComposeOpen(false)}>Cancel</Button>
+              <Button onClick={() => setComposeOpen(false)} disabled={!compose.email || !compose.subject.trim() || !compose.body.trim()}>Send</Button>
             </div>
           </div>
         </DialogContent>

@@ -9,6 +9,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function OrgLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -41,6 +42,7 @@ export default function OrgLayout({ children }: { children: ReactNode }) {
         </header>
         <div className="flex-1 p-4">{children}</div>
       </SidebarInset>
+      <Toaster position="top-right" richColors theme="light" />
     </SidebarProvider>
   );
 }

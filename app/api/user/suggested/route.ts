@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
       id: true,
       title: true,
       startsAt: true,
+      shortDescription: true,
       location: true,
       volunteersNeeded: true,
       organization: { select: { name: true } },
@@ -39,15 +40,23 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  const rows: Row[] = events.map((e) => ({
-    id: e.id,
-    title: e.title,
-    org: e.organization?.name ?? "",
-    when: e.startsAt.toISOString(),
-    location: e.location,
-    need: e.volunteersNeeded,
-    joined: e._count.signups,
-  }))
+  const rows: Row[] = events.map((e) => {
+    // Prefer the explicit Event.location; if missing or 'TBD', try to parse from shortDescription
+    let loc = e.location?.trim()
+    if (!loc || loc.toUpperCase() === "TBD") {
+      const m = /Location:\s*([^\n]+)/i.exec(e.shortDescription ?? "")
+      loc = m?.[1]?.trim() || (loc || "")
+    }
+    return {
+      id: e.id,
+      title: e.title,
+      org: e.organization?.name ?? "",
+      when: e.startsAt.toISOString(),
+      location: loc || "",
+      need: e.volunteersNeeded,
+      joined: e._count.signups,
+    }
+  })
 
   return NextResponse.json({ data: rows })
 }

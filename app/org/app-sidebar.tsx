@@ -7,7 +7,7 @@ import {
   IconFileDescription,
   IconFolder,
   IconHelp,
-  IconInnerShadowTop,
+  IconBuildingCommunity,
   IconListDetails,
   IconSettings,
   IconUsers,
@@ -93,13 +93,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               {loaded ? (
                 <a href="#" className="transition-opacity duration-300 opacity-100">
-                  <IconInnerShadowTop className="!size-5" />
-                  <span className="text-base font-semibold">{orgName}</span>
+                  <IconBuildingCommunity className="!size-5" />
+                  <span className="text-base font-semibold">Organization</span>
                 </a>
               ) : (
                 <div className="flex items-center gap-2 transition-opacity duration-300 opacity-100">
-                  <IconInnerShadowTop className="!size-5" />
-                  <Skeleton className="h-5 w-32" />
+                  <IconBuildingCommunity className="!size-5" />
+                  <Skeleton className="h-5 w-24" />
                 </div>
               )}
             </SidebarMenuButton>
