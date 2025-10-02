@@ -3,6 +3,7 @@
 import * as React from "react"
 const SaveButton = React.lazy(() => import("./SaveButton"))
 import { Button } from "@/components/ui/button"
+import { Save as SaveIcon, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,6 +23,7 @@ type OrgProfile = {
   instagram?: string
   facebook?: string
   linkedin?: string
+  contacts: Array<{ name: string; email?: string; phone?: string; role?: string }>
 }
 
 const CATEGORY_OPTIONS = [
@@ -57,6 +59,7 @@ export default function Page() {
     instagram: "",
     facebook: "",
     linkedin: "",
+    contacts: [],
   }))
 
   const MAX_DESC = 500
@@ -111,6 +114,14 @@ export default function Page() {
           instagram: p?.instagram ?? "",
           facebook: p?.facebook ?? "",
           linkedin: p?.linkedin ?? "",
+          contacts: Array.isArray((j2?.data as any)?.contacts)
+            ? ((j2?.data as any).contacts as Array<{ name: string; email?: string; phone?: string; role?: string }>).map((c) => ({
+                name: c.name || "",
+                email: c.email || "",
+                phone: c.phone || "",
+                role: c.role || "",
+              }))
+            : [],
         })
       } catch {
         // no-op
@@ -135,6 +146,25 @@ export default function Page() {
         return
       }
       toast("Profile saved")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function saveContacts() {
+    if (!orgId) return
+    setSaving(true)
+    try {
+      const res = await fetch("/api/org/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId, profile: { contacts: data.contacts } }),
+      })
+      if (!res.ok) {
+        toast("Failed to save contact", { description: "Please try again." })
+        return
+      }
+      toast("Contact saved")
     } finally {
       setSaving(false)
     }
@@ -262,7 +292,7 @@ export default function Page() {
               <Label htmlFor="contact-phone">Phone</Label>
               <Input id="contact-phone" value={data.contactPhone} onChange={(e) => update("contactPhone", e.target.value)} placeholder="(555) 123-4567" />
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="website">Website</Label>
               <Input id="website" value={data.website} onChange={(e) => update("website", e.target.value)} placeholder="https://www.example.org" />
               <p className="text-[10px] text-muted-foreground">Link to your main website or Linktree.</p>
@@ -282,6 +312,120 @@ export default function Page() {
             <div className="space-y-2">
               <Label htmlFor="linkedin">LinkedIn</Label>
               <Input id="linkedin" value={data.linkedin || ""} onChange={(e) => update("linkedin", e.target.value)} placeholder="https://linkedin.com/company/yourorg" />
+            </div>
+
+            {/* Additional contacts */}
+            <div className="md:col-span-2 pt-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">Additional contacts</div>
+                  <div className="text-sm text-muted-foreground">Add secondary points of contact.</div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setData((prev) => ({
+                      ...prev,
+                      contacts: [...prev.contacts, { name: "", email: "", phone: "", role: "" }],
+                    }))
+                  }
+                >
+                  + Add contact
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {data.contacts.map((c, idx) => (
+                  <div key={idx} className="grid grid-cols-1 gap-3 md:grid-cols-5 items-end">
+                    <div className="space-y-2">
+                      <Label>Name</Label>
+                      <Input
+                        value={c.name}
+                        onChange={(e) =>
+                          setData((prev) => {
+                            const arr = [...prev.contacts]
+                            arr[idx] = { ...arr[idx], name: e.target.value }
+                            return { ...prev, contacts: arr }
+                          })
+                        }
+                        placeholder="Full name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={c.email || ""}
+                        onChange={(e) =>
+                          setData((prev) => {
+                            const arr = [...prev.contacts]
+                            arr[idx] = { ...arr[idx], email: e.target.value }
+                            return { ...prev, contacts: arr }
+                          })
+                        }
+                        placeholder="name@org.org"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone</Label>
+                      <Input
+                        value={c.phone || ""}
+                        onChange={(e) =>
+                          setData((prev) => {
+                            const arr = [...prev.contacts]
+                            arr[idx] = { ...arr[idx], phone: e.target.value }
+                            return { ...prev, contacts: arr }
+                          })
+                        }
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                    <div className="flex items-end justify-between gap-2 md:col-span-2">
+                      <div className="flex-1 space-y-2">
+                        <Label>Role</Label>
+                        <Input
+                          value={c.role || ""}
+                          onChange={(e) =>
+                            setData((prev) => {
+                              const arr = [...prev.contacts]
+                              arr[idx] = { ...arr[idx], role: e.target.value }
+                              return { ...prev, contacts: arr }
+                            })
+                          }
+                          placeholder="Coordinator"
+                        />
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <Button
+                          type="button"
+                          size="icon"
+                          title="Save contact"
+                          aria-label="Save contact"
+                          onClick={saveContacts}
+                          disabled={!c.name || saving}
+                        >
+                          <SaveIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          title="Remove contact"
+                          aria-label="Remove contact"
+                          onClick={() =>
+                            setData((prev) => ({
+                              ...prev,
+                              contacts: prev.contacts.filter((_, i) => i !== idx),
+                            }))
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>

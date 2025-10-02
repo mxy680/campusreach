@@ -44,8 +44,8 @@ const data = {
     // 5. Messaging / Communication
     { title: "Messaging", url: "/org/messaging", icon: IconFileDescription },
     
-    // 7. Resources / Support
-    { title: "Resources", url: "/org/resources", icon: IconHelp },
+    // 7. Resources / Support (disabled)
+    { title: "Resources", url: "/org/resources", icon: IconHelp, disabled: true },
     // 8. Settings
     { title: "Settings", url: "/org/settings", icon: IconSettings },
   ],

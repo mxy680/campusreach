@@ -32,6 +32,7 @@ export function NavMain({
     title: string
     url: string
     icon?: Icon
+    disabled?: boolean
   }[]
 }) {
   const pathname = usePathname()
@@ -252,12 +253,22 @@ export function NavMain({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton tooltip={item.title} asChild>
-                <Link href={item.url}>
+              {item.disabled ? (
+                <SidebarMenuButton
+                  tooltip={`${item.title} (disabled)`}
+                  className="opacity-50 cursor-not-allowed"
+                >
                   {item.icon && <item.icon />}
-                  <span className={pathname?.startsWith(item.url) ? "font-semibold" : undefined}>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              ) : (
+                <SidebarMenuButton tooltip={item.title} asChild>
+                  <Link href={item.url}>
+                    {item.icon && <item.icon />}
+                    <span className={pathname?.startsWith(item.url) ? "font-semibold" : undefined}>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              )}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>

@@ -5,7 +5,7 @@ datasource db {
 
 /// Many-to-many style link between Organization and User for membership/admin access
 model OrganizationMember {
-  id             String        @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
   userId         String
 
@@ -17,24 +17,23 @@ model OrganizationMember {
   @@unique([organizationId, userId])
 }
 
-
 generator client {
   provider = "prisma-client-js"
 }
 
 model User {
-  id             String                  @id @default(cuid())
-  name           String?
-  email          String                  @unique
-  emailVerified  DateTime?
-  image          String?
-  accounts       Account[]
-  volunteer      Volunteer?
-  role           Role                    @default(VOLUNTEER)
-  hashedPassword String?
-  notifications  NotificationPreference?
-  conversations  Conversation[]
-  messages       Message[]               @relation("UserMessages")
+  id                      String                  @id @default(cuid())
+  name                    String?
+  email                   String                  @unique
+  emailVerified           DateTime?
+  image                   String?
+  accounts                Account[]
+  volunteer               Volunteer?
+  role                    Role                    @default(VOLUNTEER)
+  hashedPassword          String?
+  notifications           NotificationPreference?
+  conversations           Conversation[]
+  messages                Message[]               @relation("UserMessages")
   organizationMemberships OrganizationMember[]
 
   createdAt DateTime @default(now())
@@ -91,26 +90,26 @@ model Organization {
   website  String?
 
   // Profile fields
-  logoUrl      String?
-  description  String?
-  mission      String?
-  contactName  String?
-  contactEmail String?
-  contactPhone String?
-  categories   String[]
-  twitter      String?
-  instagram    String?
-  facebook     String?
-  linkedin     String?
+  logoUrl                      String?
+  description                  String?
+  mission                      String?
+  contactName                  String?
+  contactEmail                 String?
+  contactPhone                 String?
+  categories                   String[]
+  twitter                      String?
+  instagram                    String?
+  facebook                     String?
+  linkedin                     String?
   // Preferences
-  timezone    String? // e.g., "America/New_York"
-  locale      String? // e.g., "en-US"
+  timezone                     String? // e.g., "America/New_York"
+  locale                       String? // e.g., "en-US"
   defaultEventLocationTemplate String?
-  defaultTimeCommitmentHours  Int?
-  defaultVolunteersNeeded     Int?
+  defaultTimeCommitmentHours   Int?
+  defaultVolunteersNeeded      Int?
 
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
   /// Events hosted by this organization
   events        Event[]
   /// Resources published by this organization
@@ -118,12 +117,25 @@ model Organization {
   /// Conversations with volunteers
   conversations Conversation[]
   /// Messages sent from this organization
-  orgMessages   Message[]      @relation("OrgMessages")
+  messages      Message[]     @relation("OrgMessages")
   /// Members (users) that can manage this organization
-  members      OrganizationMember[]
+  members       OrganizationMember[]
+
+  /// Additional contacts
+  contacts      OrganizationContact[]
 }
 
-/// Volunteer profile associated to a User and optionally to an Organization
+model OrganizationContact {
+  id            String       @id @default(cuid())
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name          String
+  email         String?
+  phone         String?
+  role          String?
+  createdAt     DateTime     @default(now())
+}
+
 model Volunteer {
   id     String @id @default(cuid())
   userId String @unique
@@ -162,23 +174,23 @@ model Event {
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   // Core fields
-  title            String
-  shortDescription String?
-  startsAt         DateTime
-  endsAt           DateTime?
-  location         String        @default("TBD")
-  volunteersNeeded Int
-  notes            String?
+  title               String
+  shortDescription    String?
+  startsAt            DateTime
+  endsAt              DateTime?
+  location            String    @default("TBD")
+  volunteersNeeded    Int
+  notes               String?
   timeCommitmentHours Int?
 
   // Optional, stored as scalar lists
   attachments String[] // e.g. URLs to uploaded files
   specialties String[] // desired specialties/majors
 
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   // Signups
-  signups   EventSignup[]
+  signups     EventSignup[]
   timeEntries TimeEntry[]
 }
 
@@ -275,18 +287,18 @@ model NotificationPreference {
 
 /// Logged hours for a volunteer (optionally tied to an event)
 model TimeEntry {
-  id           String     @id @default(cuid())
-  volunteerId  String
-  eventId      String?
-  date         DateTime   // when the volunteering occurred
-  hours        Decimal    // number of hours (e.g., 1.5)
-  notes        String?
+  id          String   @id @default(cuid())
+  volunteerId String
+  eventId     String?
+  date        DateTime // when the volunteering occurred
+  hours       Decimal // number of hours (e.g., 1.5)
+  notes       String?
 
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  volunteer    Volunteer  @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
-  event        Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  event     Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
   @@index([volunteerId, date])
 }

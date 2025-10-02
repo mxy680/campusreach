@@ -84,12 +84,19 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
-                <Link href={item.url}>
+              {item.title === "Resources" ? (
+                <SidebarMenuButton className="opacity-50 cursor-not-allowed" tooltip="Resources (disabled)">
                   <item.icon />
-                  <span className={pathname?.startsWith(item.url) ? "font-semibold" : undefined}>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              ) : (
+                <SidebarMenuButton asChild>
+                  <Link href={item.url}>
+                    <item.icon />
+                    <span className={pathname?.startsWith(item.url) ? "font-semibold" : undefined}>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              )}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
