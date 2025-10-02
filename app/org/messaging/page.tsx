@@ -26,17 +26,15 @@ export default function Page() {
       .slice(0, 2)
       .toUpperCase()
   React.useEffect(() => {
-    const ctrl = new AbortController()
     setLoading(true)
-    fetch(`/api/org/messages`, { signal: ctrl.signal })
+    fetch(`/api/org/messages`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
         setMailsData((json?.data ?? []) as MailRow[])
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false))
-    return () => ctrl.abort()
   }, [])
 
   const mails = React.useMemo(() => {

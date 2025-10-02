@@ -56,8 +56,7 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
 
   React.useEffect(() => {
     if (!email) return
-    const ctrl = new AbortController()
-    fetch(`/api/user/profile?email=${encodeURIComponent(email)}`, { signal: ctrl.signal })
+    fetch(`/api/user/profile?email=${encodeURIComponent(email)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -65,7 +64,6 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
         if (img) setAvatar(img)
       })
       .catch(() => {})
-    return () => ctrl.abort()
   }, [email])
 
   return (

@@ -22,7 +22,6 @@ export default function Page() {
 
   // Fetch from API whenever basic filters change (server-side filters)
   React.useEffect(() => {
-    const ctrl = new AbortController()
     setLoading(true)
     const params = new URLSearchParams()
     if (query.trim()) params.set("q", query.trim())
@@ -30,7 +29,7 @@ export default function Page() {
     if (from) params.set("from", from)
     if (to) params.set("to", to)
     if (timeCommit) params.set("timeCommit", timeCommit)
-    fetch(`/api/user/opportunities?${params.toString()}`, { signal: ctrl.signal })
+    fetch(`/api/user/opportunities?${params.toString()}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -38,7 +37,6 @@ export default function Page() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-    return () => ctrl.abort()
   }, [query, from, to, timeCommit])
 
   // Specialties options derived from events' skills

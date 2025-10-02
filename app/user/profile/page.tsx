@@ -95,9 +95,8 @@ export default function Page() {
 
   React.useEffect(() => {
     if (!email) return
-    const ctrl = new AbortController()
     setLoading(true)
-    fetch(`/api/user/profile?email=${encodeURIComponent(email)}`, { signal: ctrl.signal })
+    fetch(`/api/user/profile?email=${encodeURIComponent(email)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -132,7 +131,6 @@ export default function Page() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-    return () => ctrl.abort()
   }, [email])
 
   return (

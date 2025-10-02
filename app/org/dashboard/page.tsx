@@ -30,29 +30,25 @@ export default function Page() {
   })
   React.useEffect(() => {
     // Try to detect orgId from a server hint endpoint if present; for now, load first org the user belongs to
-    const ctrl = new AbortController()
-    fetch("/api/orgs", { signal: ctrl.signal })
+    fetch("/api/orgs")
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
         const first = (json?.data ?? [])[0]?.id as string | undefined
         if (first) setOrgId(first)
       })
-      .catch(() => { })
-    return () => ctrl.abort()
+      .catch(() => {})
   }, [])
   React.useEffect(() => {
     if (!orgId) return
-    const ctrl = new AbortController()
-    fetch(`/api/org/signups?orgId=${encodeURIComponent(orgId)}`, { signal: ctrl.signal })
+    fetch(`/api/org/signups?orgId=${encodeURIComponent(orgId)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
         const rows = (json?.data ?? []) as { month: string; signups: number }[]
         if (Array.isArray(rows) && rows.length) setSignupsData(rows)
       })
-      .catch(() => { })
-    return () => ctrl.abort()
+      .catch(() => {})
   }, [orgId])
   const [eventsData, setEventsData] = React.useState<{ month: string; events: number }[]>(() => {
     const now = new Date()
@@ -67,19 +63,15 @@ export default function Page() {
   // Removed hours chart; keeping signups and events
   React.useEffect(() => {
     if (!orgId) return
-    const ctrl = new AbortController()
-    fetch(`/api/org/events-stats?orgId=${encodeURIComponent(orgId)}`, { signal: ctrl.signal })
+    fetch(`/api/org/events-stats?orgId=${encodeURIComponent(orgId)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
         const rows = (json?.data ?? []) as { month: string; events: number }[]
         if (Array.isArray(rows) && rows.length) setEventsData(rows)
       })
-      .catch(() => { })
-    return () => ctrl.abort()
+      .catch(() => {})
   }, [orgId])
-  // (hours effect removed)
-
   const rangeFooter = React.useMemo(() => {
     if (!signupsData.length) return ""
     const now = new Date()
@@ -92,15 +84,13 @@ export default function Page() {
   // Platform signups (students vs orgs)
   const [platformData, setPlatformData] = React.useState<PlatformBarDatum[]>([])
   React.useEffect(() => {
-    const ctrl = new AbortController()
-    fetch("/api/platform/signups", { signal: ctrl.signal })
+    fetch("/api/platform/signups")
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
         setPlatformData((json?.data ?? []) as PlatformBarDatum[])
       })
-      .catch(() => { })
-    return () => ctrl.abort()
+      .catch(() => {})
   }, [])
   const platformTrend = (() => {
     if (platformData.length < 2) return ""

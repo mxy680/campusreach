@@ -36,8 +36,7 @@ export default function Page() {
   })
   React.useEffect(() => {
     if (!userEmail) return
-    const ctrl = new AbortController()
-    fetch(`/api/user/hours?email=${encodeURIComponent(userEmail)}`, { signal: ctrl.signal })
+    fetch(`/api/user/hours?email=${encodeURIComponent(userEmail)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -45,7 +44,6 @@ export default function Page() {
         if (Array.isArray(data) && data.length) setHoursData(data)
       })
       .catch(() => {})
-    return () => ctrl.abort()
   }, [userEmail])
 
   // Placeholder data for UI scaffolding
@@ -61,8 +59,7 @@ export default function Page() {
   })
   React.useEffect(() => {
     if (!userEmail) return
-    const ctrl = new AbortController()
-    fetch(`/api/user/joined?email=${encodeURIComponent(userEmail)}`, { signal: ctrl.signal })
+    fetch(`/api/user/joined?email=${encodeURIComponent(userEmail)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -70,15 +67,13 @@ export default function Page() {
         if (Array.isArray(data) && data.length) setJoinedData(data)
       })
       .catch(() => {})
-    return () => ctrl.abort()
   }, [userEmail])
   // Pie chart: organizations volunteered with (counts)
   const [orgPieData, setOrgPieData] = React.useState<{ org: string; count: number; fill: string }[]>([])
   const [orgNoData, setOrgNoData] = React.useState(false)
   React.useEffect(() => {
     if (!userEmail) return
-    const ctrl = new AbortController()
-    fetch(`/api/user/org-breakdown?email=${encodeURIComponent(userEmail)}`, { signal: ctrl.signal })
+    fetch(`/api/user/org-breakdown?email=${encodeURIComponent(userEmail)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -101,7 +96,6 @@ export default function Page() {
         setOrgPieData(colored)
       })
       .catch(() => {})
-    return () => ctrl.abort()
   }, [userEmail])
   const orgPieConfig = {
     count: { label: "Shifts" },
@@ -127,8 +121,7 @@ export default function Page() {
   const [upcomingJoined, setUpcomingJoined] = React.useState<Opportunity[]>([])
   React.useEffect(() => {
     if (!userEmail) return
-    const ctrl = new AbortController()
-    fetch(`/api/user/upcoming?email=${encodeURIComponent(userEmail)}`, { signal: ctrl.signal })
+    fetch(`/api/user/upcoming?email=${encodeURIComponent(userEmail)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -136,33 +129,28 @@ export default function Page() {
         setUpcomingJoined(rows)
       })
       .catch(() => {})
-    return () => ctrl.abort()
   }, [userEmail])
   const [suggested, setSuggested] = React.useState<Opportunity[]>([])
   React.useEffect(() => {
     if (!userEmail) return
-    const ctrl = new AbortController()
-    fetch(`/api/user/suggested?email=${encodeURIComponent(userEmail)}`, { signal: ctrl.signal })
+    fetch(`/api/user/suggested?email=${encodeURIComponent(userEmail)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
         setSuggested((json?.data ?? []) as Opportunity[])
       })
       .catch(() => {})
-    return () => ctrl.abort()
   }, [userEmail])
   const [messages, setMessages] = React.useState<{ id: string; from: string; subject: string; date: string }[]>([])
   React.useEffect(() => {
     if (!userEmail) return
-    const ctrl = new AbortController()
-    fetch(`/api/user/messages?email=${encodeURIComponent(userEmail)}`, { signal: ctrl.signal })
+    fetch(`/api/user/messages?email=${encodeURIComponent(userEmail)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
         setMessages((json?.data ?? []) as typeof messages)
       })
       .catch(() => {})
-    return () => ctrl.abort()
   }, [userEmail])
 
   const fmt = (iso: string) => {

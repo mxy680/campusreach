@@ -42,9 +42,8 @@ export default function Page() {
 
   React.useEffect(() => {
     if (!email) return
-    const ctrl = new AbortController()
     setLoading(true)
-    fetch(`/api/user/messages?email=${encodeURIComponent(email)}`, { signal: ctrl.signal })
+    fetch(`/api/user/messages?email=${encodeURIComponent(email)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -52,20 +51,17 @@ export default function Page() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-    return () => ctrl.abort()
   }, [email])
 
   // Load orgs for compose
   React.useEffect(() => {
-    const ctrl = new AbortController()
-    fetch(`/api/orgs`, { signal: ctrl.signal })
+    fetch(`/api/orgs`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
         setOrgs((json?.data ?? []) as { id: string; name: string }[])
       })
       .catch(() => {})
-    return () => ctrl.abort()
   }, [])
 
   const mails = React.useMemo(() => {

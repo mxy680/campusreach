@@ -23,9 +23,8 @@ export default function Page() {
 
   React.useEffect(() => {
     if (!emailFromSession) return
-    const ctrl = new AbortController()
     setLoading(true)
-    fetch(`/api/user/settings?email=${encodeURIComponent(emailFromSession)}`, { signal: ctrl.signal })
+    fetch(`/api/user/settings?email=${encodeURIComponent(emailFromSession)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -37,7 +36,6 @@ export default function Page() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-    return () => ctrl.abort()
   }, [emailFromSession])
 
   const onSave = async () => {

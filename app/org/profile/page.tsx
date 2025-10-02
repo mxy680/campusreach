@@ -81,16 +81,15 @@ export default function Page() {
 
   // Load orgId and profile
   React.useEffect(() => {
-    const ctrl = new AbortController()
     ;(async () => {
       try {
-        const r1 = await fetch("/api/orgs", { signal: ctrl.signal })
+        const r1 = await fetch("/api/orgs")
         if (!r1.ok) return
         const j1 = await r1.json()
         const first = (j1?.data ?? [])[0]?.id as string | undefined
         if (!first) return
         setOrgId(first)
-        const r2 = await fetch(`/api/org/profile?orgId=${encodeURIComponent(first)}`, { signal: ctrl.signal })
+        const r2 = await fetch(`/api/org/profile?orgId=${encodeURIComponent(first)}`)
         if (!r2.ok) return
         const j2 = await r2.json()
         const p: Partial<OrgProfile> = (j2?.data ?? {}) as Partial<OrgProfile>
@@ -108,29 +107,12 @@ export default function Page() {
           facebook: p?.facebook ?? "",
           linkedin: p?.linkedin ?? "",
         })
-      } catch (err: unknown) {
-        // Ignore abort errors triggered by unmount/cleanup.
-        // In some runtimes, fetch abort may surface as a DOMException (AbortError),
-        // or as the raw abort reason string passed to abort(), e.g. "unmount".
-        const isAbortDomException = err instanceof DOMException && err.name === "AbortError"
-        const isAbortReasonString = typeof err === "string" && err.toLowerCase() === "unmount"
-        const isAbortLikeObject =
-          typeof err === "object" && err !== null && "name" in err && (err as { name?: string }).name === "AbortError"
-        if (!(isAbortDomException || isAbortReasonString || isAbortLikeObject)) {
-          console.error(err)
-        }
+      } catch {
+        // no-op
       } finally {
         setLoading(false)
       }
     })()
-    return () => {
-      try {
-        // Provide a reason to avoid "signal is aborted without reason" noise in some runtimes
-        ctrl.abort("unmount")
-      } catch {
-        ctrl.abort()
-      }
-    }
   }, [])
 
   async function onSave() {

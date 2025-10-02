@@ -20,9 +20,8 @@ export default function Page() {
   const [confirmPassword, setConfirmPassword] = React.useState("")
 
   React.useEffect(() => {
-    const ctrl = new AbortController()
     setLoading(true)
-    fetch("/api/org/settings", { signal: ctrl.signal })
+    fetch("/api/org/settings")
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
@@ -31,7 +30,6 @@ export default function Page() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-    return () => ctrl.abort()
   }, [])
 
   return (
