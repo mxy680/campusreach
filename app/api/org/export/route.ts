@@ -1,0 +1,134 @@
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+
+function toCSV(rows: Array<Record<string, unknown>>, headers: string[]) {
+  const esc = (v: unknown) => {
+    if (v == null) return ""
+    const s = String(v)
+    if (s.includes(",") || s.includes("\n") || s.includes('"')) return '"' + s.replace(/"/g, '""') + '"'
+    return s
+  }
+  const out = [headers.join(",")]
+  for (const r of rows) out.push(headers.map((h) => esc(r[h])).join(","))
+  return out.join("\n")
+}
+
+// GET /api/org/export?type=signups|volunteers|messages|account
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const { searchParams } = new URL(req.url)
+    const type = searchParams.get("type") as "signups" | "volunteers" | "messages" | "account" | null
+    if (!type) return NextResponse.json({ error: "Missing type" }, { status: 400 })
+
+    // Resolve org by current user's email (same as org/settings), then ensure requester is a member
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true, id: true } })
+    if (!user?.email) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+    const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
+    if (!org?.id) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+    const member = await prisma.organizationMember.findFirst({ where: { organizationId: org.id, userId: session.user.id } })
+    if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
+    let csv = ""
+    let filename = "export.csv"
+
+    if (type === "signups") {
+      const rows = await prisma.eventSignup.findMany({
+        where: { event: { organizationId: org.id } },
+        include: { event: { select: { title: true, startsAt: true, endsAt: true } }, volunteer: { select: { user: { select: { email: true, name: true } } } } },
+        orderBy: { createdAt: "asc" },
+      })
+      const flat = rows.map((r) => ({
+        signupId: r.id,
+        eventTitle: r.event?.title ?? "",
+        startsAt: r.event?.startsAt?.toISOString() ?? "",
+        endsAt: r.event?.endsAt?.toISOString() ?? "",
+        volunteerName: r.volunteer?.user?.name ?? "",
+        volunteerEmail: r.volunteer?.user?.email ?? "",
+        status: r.status,
+        createdAt: r.createdAt.toISOString(),
+      }))
+      csv = toCSV(flat, ["signupId", "eventTitle", "startsAt", "endsAt", "volunteerName", "volunteerEmail", "status", "createdAt"])
+      filename = `signups-${org.id}.csv`
+    } else if (type === "volunteers") {
+      const rows = await prisma.volunteer.findMany({
+        where: { conversations: { some: { organizationId: org.id } } },
+        include: { user: { select: { email: true, name: true } } },
+        orderBy: { createdAt: "asc" },
+      })
+      const flat = rows.map((v) => ({
+        volunteerId: v.id,
+        name: v.user?.name ?? "",
+        email: v.user?.email ?? "",
+        major: v.major ?? "",
+        school: v.school ?? "",
+        phone: v.phone ?? "",
+        createdAt: v.createdAt.toISOString(),
+      }))
+      csv = toCSV(flat, ["volunteerId", "name", "email", "major", "school", "phone", "createdAt"])
+      filename = `volunteers-${org.id}.csv`
+    } else if (type === "messages") {
+      const rows = await prisma.message.findMany({
+        where: { fromOrgId: org.id },
+        include: { conversation: { select: { subject: true } }, fromUser: { select: { email: true, name: true } } },
+        orderBy: { createdAt: "asc" },
+      })
+      const flat = rows.map((m) => ({
+        messageId: m.id,
+        subject: m.conversation?.subject ?? "",
+        fromName: m.fromUser?.name ?? "",
+        fromEmail: m.fromUser?.email ?? "",
+        createdAt: m.createdAt.toISOString(),
+        body: m.body,
+      }))
+      csv = toCSV(flat, ["messageId", "subject", "fromName", "fromEmail", "createdAt", "body"])
+      filename = `messages-${org.id}.csv`
+    } else if (type === "account") {
+      const orgInfo = await prisma.organization.findUnique({
+        where: { id: org.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          contactEmail: true,
+          timezone: true,
+          locale: true,
+          defaultEventLocationTemplate: true,
+          defaultTimeCommitmentHours: true,
+          defaultVolunteersNeeded: true,
+          categories: true,
+          website: true,
+          twitter: true,
+          instagram: true,
+          facebook: true,
+          linkedin: true,
+          description: true,
+          mission: true,
+          contactName: true,
+          contactPhone: true,
+          logoUrl: true,
+        },
+      })
+      const body = JSON.stringify(orgInfo, null, 2)
+      return new NextResponse(body, {
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Content-Disposition": `attachment; filename=organization-${org.id}.json`,
+        },
+      })
+    }
+
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename=${filename}`,
+      },
+    })
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 })
+  }
+}

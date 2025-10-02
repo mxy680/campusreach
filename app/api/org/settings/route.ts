@@ -13,11 +13,20 @@ export async function GET() {
 
   const org = await prisma.organization.findFirst({
     where: { email: user.email },
-    select: { id: true, name: true, contactEmail: true },
+    select: { id: true, name: true, contactEmail: true, timezone: true, locale: true, defaultEventLocationTemplate: true, defaultTimeCommitmentHours: true, defaultVolunteersNeeded: true },
   })
   if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
 
-  return NextResponse.json({ id: org.id, name: org.name ?? "", contactEmail: org.contactEmail ?? "" })
+  return NextResponse.json({
+    id: org.id,
+    name: org.name ?? "",
+    contactEmail: org.contactEmail ?? "",
+    timezone: org.timezone ?? null,
+    locale: org.locale ?? null,
+    defaultEventLocationTemplate: org.defaultEventLocationTemplate ?? null,
+    defaultTimeCommitmentHours: org.defaultTimeCommitmentHours ?? null,
+    defaultVolunteersNeeded: org.defaultVolunteersNeeded ?? null,
+  })
 }
 
 // Update current organization's settings
@@ -28,9 +37,12 @@ export async function PUT(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const name = (body?.name as string | undefined)?.trim()
   const contactEmail = (body?.contactEmail as string | undefined)?.trim()
-  if (!name || !contactEmail) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 })
-  }
+  const timezone = (body?.timezone as string | undefined)?.trim() || null
+  const locale = (body?.locale as string | undefined)?.trim() || null
+  const defaultEventLocationTemplate = (body?.defaultEventLocationTemplate as string | undefined)?.trim() || null
+  const defaultTimeCommitmentHours = body?.defaultTimeCommitmentHours as number | undefined
+  const defaultVolunteersNeeded = body?.defaultVolunteersNeeded as number | undefined
+  if (!name) return NextResponse.json({ error: "Missing name" }, { status: 400 })
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
   if (!user?.email) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
@@ -40,9 +52,17 @@ export async function PUT(req: NextRequest) {
 
   const updated = await prisma.organization.update({
     where: { id: org.id },
-    data: { name, contactEmail },
-    select: { id: true, name: true, contactEmail: true },
+    data: {
+      name,
+      ...(contactEmail ? { contactEmail } : {}),
+      timezone,
+      locale,
+      defaultEventLocationTemplate,
+      defaultTimeCommitmentHours: defaultTimeCommitmentHours ?? null,
+      defaultVolunteersNeeded: defaultVolunteersNeeded ?? null,
+    },
+    select: { id: true, name: true, contactEmail: true, timezone: true, locale: true, defaultEventLocationTemplate: true, defaultTimeCommitmentHours: true, defaultVolunteersNeeded: true },
   })
 
-  return NextResponse.json({ id: updated.id, name: updated.name, contactEmail: updated.contactEmail })
+  return NextResponse.json(updated)
 }

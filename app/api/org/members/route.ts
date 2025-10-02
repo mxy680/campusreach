@@ -28,6 +28,30 @@ export async function GET(req: Request) {
   }
 }
 
+// DELETE /api/org/members { orgId, userId }
+// Removes a member from the organization. Requester must be a member.
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const body = await req.json().catch(() => ({})) as { orgId?: string; userId?: string }
+    const orgId = body.orgId
+    const userId = body.userId
+    if (!orgId || !userId) return NextResponse.json({ error: "Missing fields" }, { status: 400 })
+
+    // Ensure requester is a member of the org
+    const requester = await prisma.organizationMember.findFirst({ where: { organizationId: orgId, userId: session.user.id } })
+    if (!requester) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
+    // Prevent removing yourself to avoid lockout via UI (optional)
+    // if (userId === session.user.id) return NextResponse.json({ error: "Cannot remove yourself" }, { status: 400 })
+
+    await prisma.organizationMember.delete({ where: { organizationId_userId: { organizationId: orgId, userId } } })
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 })
+  }
+}
 // POST /api/org/members { orgId }
 // Links the CURRENT signed-in user as a member of orgId
 export async function POST(req: Request) {

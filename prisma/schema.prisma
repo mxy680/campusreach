@@ -102,6 +102,12 @@ model Organization {
   instagram    String?
   facebook     String?
   linkedin     String?
+  // Preferences
+  timezone    String? // e.g., "America/New_York"
+  locale      String? // e.g., "en-US"
+  defaultEventLocationTemplate String?
+  defaultTimeCommitmentHours  Int?
+  defaultVolunteersNeeded     Int?
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
