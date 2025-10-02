@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { signOut } from "next-auth/react"
 import {
@@ -48,6 +49,7 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
   const { data: session } = useSession()
   const name = session?.user?.name ?? "Volunteer"
   const email = session?.user?.email ?? ""
+  const pathname = usePathname()
   const [avatar, setAvatar] = React.useState<string>(
     ((session?.user as { image?: string } | undefined)?.image) ?? "/avatars/shadcn.jpg"
   )
@@ -87,7 +89,7 @@ export function UserAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar
               <SidebarMenuButton asChild>
                 <Link href={item.url}>
                   <item.icon />
-                  <span>{item.title}</span>
+                  <span className={pathname?.startsWith(item.url) ? "font-semibold" : undefined}>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

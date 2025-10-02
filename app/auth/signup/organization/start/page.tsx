@@ -14,8 +14,17 @@ export default async function Page() {
     include: { volunteer: true },
   });
 
-  if (me?.volunteer || me?.role === "VOLUNTEER") {
+  // If the user already has a volunteer profile, this email is in use for a volunteer account.
+  if (me?.volunteer) {
     redirect("/auth/signup/organization?error=EmailInUse");
+  }
+
+  // Ensure role is set to ORGANIZATION for org onboarding.
+  if (me?.role !== "ORGANIZATION") {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { role: "ORGANIZATION" },
+    });
   }
 
   redirect("/auth/signup/organization/profile");

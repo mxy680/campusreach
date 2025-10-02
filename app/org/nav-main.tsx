@@ -2,6 +2,7 @@
 
 import React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { IconCirclePlusFilled, type Icon } from "@tabler/icons-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
@@ -33,6 +34,7 @@ export function NavMain({
     icon?: Icon
   }[]
 }) {
+  const pathname = usePathname()
   const [selectedSpecialties, setSelectedSpecialties] = React.useState<string[]>([])
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([])
   const [title, setTitle] = React.useState("")
@@ -253,7 +255,7 @@ export function NavMain({
               <SidebarMenuButton tooltip={item.title} asChild>
                 <Link href={item.url}>
                   {item.icon && <item.icon />}
-                  <span>{item.title}</span>
+                  <span className={pathname?.startsWith(item.url) ? "font-semibold" : undefined}>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
