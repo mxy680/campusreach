@@ -1,0 +1,24 @@
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const body = await req.json().catch(() => null)
+  if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+
+  const { weeklyHours } = body as { weeklyHours?: number }
+
+  const volunteer = await prisma.volunteer.findUnique({ where: { userId: session.user.id }, select: { id: true } })
+  if (!volunteer) return NextResponse.json({ error: "Volunteer profile not found" }, { status: 404 })
+
+  await prisma.volunteer.update({
+    where: { id: volunteer.id },
+    data: { weeklyGoalHours: typeof weeklyHours === "number" ? weeklyHours : null },
+  })
+
+  return NextResponse.json({ ok: true })
+}

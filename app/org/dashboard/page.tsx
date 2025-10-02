@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { IconBell } from "@tabler/icons-react"
 import { ChartAreaLinear } from "../components/chart-area-linear"
 import { ChartBarMultiple, type PlatformBarDatum } from "../components/chart-bar-multiple"
+import { ChartBarSingle } from "../components/chart-bar-single"
 
 export default function Page() {
   const announcements = [
@@ -146,12 +147,13 @@ export default function Page() {
           footerPrimary={signupsTrend || undefined}
           footerSecondary={rangeFooter}
         />
-        <ChartAreaLinear
-          title="Upcoming events"
-          description="Events scheduled over the last 6 months"
+        <ChartBarSingle
+          title="Events hosted"
+          description="Number of events per month (last 6 months)"
           data={eventsData}
           dataKey="events"
           label="Events"
+          colorVar="hsl(24 95% 55%)"
           footerPrimary={eventsTrend || undefined}
           footerSecondary={eventsFooter}
         />

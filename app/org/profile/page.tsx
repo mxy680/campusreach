@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+const SaveButton = React.lazy(() => import("./SaveButton"))
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -34,7 +35,6 @@ const CATEGORY_OPTIONS = [
 ]
 
 export default function Page() {
-  const [editing, setEditing] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
   const [orgId, setOrgId] = React.useState<string | null>(null)
@@ -108,11 +108,29 @@ export default function Page() {
           facebook: p?.facebook ?? "",
           linkedin: p?.linkedin ?? "",
         })
+      } catch (err: unknown) {
+        // Ignore abort errors triggered by unmount/cleanup.
+        // In some runtimes, fetch abort may surface as a DOMException (AbortError),
+        // or as the raw abort reason string passed to abort(), e.g. "unmount".
+        const isAbortDomException = err instanceof DOMException && err.name === "AbortError"
+        const isAbortReasonString = typeof err === "string" && err.toLowerCase() === "unmount"
+        const isAbortLikeObject =
+          typeof err === "object" && err !== null && "name" in err && (err as { name?: string }).name === "AbortError"
+        if (!(isAbortDomException || isAbortReasonString || isAbortLikeObject)) {
+          console.error(err)
+        }
       } finally {
         setLoading(false)
       }
     })()
-    return () => ctrl.abort()
+    return () => {
+      try {
+        // Provide a reason to avoid "signal is aborted without reason" noise in some runtimes
+        ctrl.abort("unmount")
+      } catch {
+        ctrl.abort()
+      }
+    }
   }, [])
 
   async function onSave() {
@@ -130,7 +148,6 @@ export default function Page() {
         return
       }
       toast("Profile saved")
-      setEditing(false)
     } finally {
       setSaving(false)
     }
@@ -147,13 +164,10 @@ export default function Page() {
         <div className="flex items-center gap-2">
         {loading ? (
           <div className="text-xs text-muted-foreground">Loading…</div>
-        ) : !editing ? (
-          <Button size="sm" onClick={() => setEditing(true)}>Edit Profile</Button>
         ) : (
-          <>
-            <Button size="sm" variant="outline" onClick={() => { setLogoFile(null); setEditing(false) }}>Cancel</Button>
-            <Button size="sm" onClick={onSave} disabled={saving}>{saving ? "Saving…" : "Save Changes"}</Button>
-          </>
+          <React.Suspense fallback={<Button size="sm" disabled>Loading…</Button>}>
+            <SaveButton saving={saving} onSave={onSave} />
+          </React.Suspense>
         )}
         </div>
       </div>
@@ -180,12 +194,11 @@ export default function Page() {
                 <Input
                   type="file"
                   accept="image/*"
-                  disabled={!editing}
                   onChange={(e) => {
                     const f = e.currentTarget.files?.[0] || null
                     setLogoFile(f)
                   }}
-                  className={`max-w-xs ${!editing ? "opacity-60 cursor-not-allowed" : ""}`}
+                  className={`max-w-xs`}
                 />
               </div>
             </div>
@@ -197,10 +210,9 @@ export default function Page() {
                 id="org-description"
                 value={data.description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => update("description", e.target.value)}
-                disabled={!editing}
                 placeholder="Brief description of your organization"
                 maxLength={MAX_DESC}
-                className={`w-full min-h-28 rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!editing ? "opacity-50 cursor-not-allowed bg-muted" : "bg-background"}`}
+                className={`w-full min-h-28 rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-background`}
               />
               <div className="flex justify-end text-[10px] text-muted-foreground">{data.description.length}/{MAX_DESC}</div>
             </div>
@@ -212,10 +224,9 @@ export default function Page() {
                 id="org-mission"
                 value={data.mission}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => update("mission", e.target.value)}
-                disabled={!editing}
                 placeholder="Your mission and impact goals"
                 maxLength={MAX_MISSION}
-                className={`w-full min-h-24 rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!editing ? "opacity-50 cursor-not-allowed bg-muted" : "bg-background"}`}
+                className={`w-full min-h-24 rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-background`}
               />
               <div className="flex justify-end text-[10px] text-muted-foreground">{data.mission.length}/{MAX_MISSION}</div>
             </div>
@@ -230,11 +241,10 @@ export default function Page() {
                     <button
                       type="button"
                       key={tag}
-                      disabled={!editing}
                       onClick={() => toggleCategory(tag)}
                       className={`rounded-full px-3 py-1 text-xs border transition-colors ${
                         active ? "bg-secondary border-secondary text-foreground" : "bg-background text-muted-foreground hover:bg-muted"
-                      } ${!editing ? "opacity-60 cursor-not-allowed" : ""}`}
+                      }`}
                     >
                       {tag}
                     </button>
@@ -255,36 +265,36 @@ export default function Page() {
           <CardContent className="grid grid-cols-1 gap-4 pt-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="contact-name">Primary contact</Label>
-              <Input id="contact-name" value={data.contactName} disabled={!editing} onChange={(e) => update("contactName", e.target.value)} placeholder="Name" className={!editing ? "bg-muted opacity-80 cursor-not-allowed" : undefined} />
+              <Input id="contact-name" value={data.contactName} onChange={(e) => update("contactName", e.target.value)} placeholder="Name" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="contact-email">Email</Label>
-              <Input id="contact-email" type="email" value={data.contactEmail} disabled={!editing} onChange={(e) => update("contactEmail", e.target.value)} placeholder="name@org.org" className={!editing ? "bg-muted opacity-80 cursor-not-allowed" : undefined} />
+              <Input id="contact-email" type="email" value={data.contactEmail} onChange={(e) => update("contactEmail", e.target.value)} placeholder="name@org.org" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="contact-phone">Phone</Label>
-              <Input id="contact-phone" value={data.contactPhone} disabled={!editing} onChange={(e) => update("contactPhone", e.target.value)} placeholder="(555) 123-4567" className={!editing ? "bg-muted opacity-80 cursor-not-allowed" : undefined} />
+              <Input id="contact-phone" value={data.contactPhone} onChange={(e) => update("contactPhone", e.target.value)} placeholder="(555) 123-4567" />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="website">Website</Label>
-              <Input id="website" value={data.website} disabled={!editing} onChange={(e) => update("website", e.target.value)} placeholder="https://www.example.org" className={!editing ? "bg-muted opacity-80 cursor-not-allowed" : undefined} />
+              <Input id="website" value={data.website} onChange={(e) => update("website", e.target.value)} placeholder="https://www.example.org" />
               <p className="text-[10px] text-muted-foreground">Link to your main website or Linktree.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="twitter">Twitter/X</Label>
-              <Input id="twitter" value={data.twitter || ""} disabled={!editing} onChange={(e) => update("twitter", e.target.value)} placeholder="https://x.com/yourorg" className={!editing ? "bg-muted opacity-80 cursor-not-allowed" : undefined} />
+              <Input id="twitter" value={data.twitter || ""} onChange={(e) => update("twitter", e.target.value)} placeholder="https://x.com/yourorg" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="instagram">Instagram</Label>
-              <Input id="instagram" value={data.instagram || ""} disabled={!editing} onChange={(e) => update("instagram", e.target.value)} placeholder="https://instagram.com/yourorg" className={!editing ? "bg-muted opacity-80 cursor-not-allowed" : undefined} />
+              <Input id="instagram" value={data.instagram || ""} onChange={(e) => update("instagram", e.target.value)} placeholder="https://instagram.com/yourorg" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="facebook">Facebook</Label>
-              <Input id="facebook" value={data.facebook || ""} disabled={!editing} onChange={(e) => update("facebook", e.target.value)} placeholder="https://facebook.com/yourorg" className={!editing ? "bg-muted opacity-80 cursor-not-allowed" : undefined} />
+              <Input id="facebook" value={data.facebook || ""} onChange={(e) => update("facebook", e.target.value)} placeholder="https://facebook.com/yourorg" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="linkedin">LinkedIn</Label>
-              <Input id="linkedin" value={data.linkedin || ""} disabled={!editing} onChange={(e) => update("linkedin", e.target.value)} placeholder="https://linkedin.com/company/yourorg" className={!editing ? "bg-muted opacity-80 cursor-not-allowed" : undefined} />
+              <Input id="linkedin" value={data.linkedin || ""} onChange={(e) => update("linkedin", e.target.value)} placeholder="https://linkedin.com/company/yourorg" />
             </div>
           </CardContent>
         </Card>

@@ -17,6 +17,23 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-border": "var(--border)",
         } as React.CSSProperties
       }
+      closeButton
+      expand
+      duration={2500}
+      gap={8}
+      offset={16}
+      toastOptions={{
+        classNames: {
+          toast:
+            "rounded-lg border border-[var(--normal-border)] bg-[var(--normal-bg)] text-[var(--normal-text)] shadow-sm",
+          title: "font-medium",
+          description: "text-sm opacity-90",
+          actionButton:
+            "rounded-md bg-primary text-primary-foreground hover:bg-primary/90",
+          cancelButton:
+            "rounded-md border border-input bg-background text-foreground hover:bg-accent",
+        },
+      }}
       {...props}
     />
   )

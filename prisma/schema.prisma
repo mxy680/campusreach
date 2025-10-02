@@ -119,6 +119,9 @@ model Volunteer {
   radiusMiles    Int           @default(10)
   transportNotes String?
 
+  // Goals
+  weeklyGoalHours Int?
+
   // Relations
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   signups       EventSignup[]

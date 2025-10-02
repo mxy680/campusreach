@@ -4,6 +4,7 @@ import { getToken } from "next-auth/jwt";
 
 // Protected route prefixes
 const PROFILE_PATH = "/auth/signup/user/profile";
+const USER_SIGNUP_PREFIX = "/auth/signup/user";
 const ORG_PROFILE_PATH = "/auth/signup/organization/profile";
 const ORG_START_PATH = "/auth/signup/organization/start";
 const GENERIC_DASHBOARD_PATH = "/dashboard";
@@ -89,8 +90,7 @@ export async function middleware(req: NextRequest) {
     if (onOrgDashboard) return redirect(USER_DASHBOARD_PATH);
     // Volunteers must complete profile before accessing their dashboard
     if (!profileComplete && onUserDashboard) return redirect(PROFILE_PATH);
-    // If profile complete and trying to access profile page, push to their dashboard
-    if (profileComplete && onProfile) return redirect(USER_DASHBOARD_PATH);
+    // Always allow volunteer signup flow pages regardless of completion state
   } else if (role === "ORGANIZATION") {
     // Orgs should not access user dashboard or profile page
     if (onUserDashboard || onProfile) return redirect(ORG_DASHBOARD_PATH);
@@ -98,7 +98,14 @@ export async function middleware(req: NextRequest) {
 
   // If authenticated and trying to access generic auth pages, push to respective dashboard
   // Do NOT redirect away from the organization profile step; allow it for both roles
-  if (isAuthed && !onProfile && !onOrgProfile && !onOrgStart && onAuthPages) {
+  if (
+    isAuthed &&
+    // allow user signup flow pages (any under /auth/signup/user/*)
+    !pathname.startsWith(USER_SIGNUP_PREFIX) &&
+    !onOrgProfile &&
+    !onOrgStart &&
+    onAuthPages
+  ) {
     return redirect(role === "ORGANIZATION" ? ORG_DASHBOARD_PATH : USER_DASHBOARD_PATH);
   }
 

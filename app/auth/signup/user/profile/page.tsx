@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 export default function Page() {
+  const router = useRouter();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [pronouns, setPronouns] = useState("");
@@ -35,7 +37,7 @@ export default function Page() {
         body: JSON.stringify({ firstName, lastName, pronouns, major, graduationDate }),
       });
       if (res.ok) {
-        window.location.href = "/dashboard";
+        router.push("/auth/signup/user/transport");
         return;
       }
       console.error("Profile save failed", await res.text());
@@ -46,14 +48,7 @@ export default function Page() {
 
   return (
     <main className="min-h-[calc(100vh-4rem)] p-6 bg-gradient-to-b from-primary/20 via-transparent to-transparent">
-      <header className="mb-6 flex justify-end gap-2">
-        <Button asChild variant="outline">
-          <Link href="/auth/signin">Sign in</Link>
-        </Button>
-        <Button asChild variant="default">
-          <Link href="/auth/signup/user">Sign up</Link>
-        </Button>
-      </header>
+      <header className="mb-6" />
 
       <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center">
         <div className="w-full max-w-sm">
@@ -156,9 +151,21 @@ export default function Page() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "Saving..." : "Continue"}
-                </Button>
+                {/* No transport or goals on this step */}
+
+                <div className="mt-4 flex items-center justify-between gap-2">
+                  <Button asChild variant="outline" type="button">
+                    <Link href="/auth/signup/user">Back</Link>
+                  </Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? "Saving..." : "Continue"}
+                  </Button>
+                </div>
+                <div className="mt-3">
+                  <div className="h-1.5 w-full rounded-full bg-muted">
+                    <div className="h-1.5 rounded-full bg-primary" style={{ width: "33%" }} />
+                  </div>
+                </div>
               </form>
             </CardContent>
           </Card>
