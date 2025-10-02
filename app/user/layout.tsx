@@ -17,7 +17,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
     const section = afterUser[0] ?? "dashboard";
     const map: Record<string, string> = {
       dashboard: "Dashboard",
-      opportunities: "Opportunities",
+      opportunities: "Explore",
       messaging: "Messaging",
       resources: "Resources",
       settings: "Settings",

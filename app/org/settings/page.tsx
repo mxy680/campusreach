@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { signIn } from "next-auth/react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function Page() {
   // Account info
@@ -13,6 +15,11 @@ export default function Page() {
   const [orgEmail, setOrgEmail] = React.useState("")
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
+  const [orgId, setOrgId] = React.useState<string | null>(null)
+
+  // Team access
+  const [members, setMembers] = React.useState<Array<{ id: string; user: { id: string; name: string | null; email: string; image: string | null } }>>([])
+  const [membersLoading, setMembersLoading] = React.useState(false)
 
   // Password
   const [currPassword, setCurrPassword] = React.useState("")
@@ -32,12 +39,39 @@ export default function Page() {
       .finally(() => setLoading(false))
   }, [])
 
+  // Load orgId (first org for this user)
+  React.useEffect(() => {
+    fetch("/api/orgs")
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        const first = (json?.data ?? [])[0]?.id as string | undefined
+        if (first) setOrgId(first)
+      })
+      .catch(() => {})
+  }, [])
+
+  // Load members when orgId is ready
+  React.useEffect(() => {
+    if (!orgId) return
+    setMembersLoading(true)
+    fetch(`/api/org/members?orgId=${encodeURIComponent(orgId)}`)
+      .then(async (r) => {
+        if (!r.ok) return
+        const json = await r.json()
+        setMembers(Array.isArray(json?.data) ? json.data : [])
+      })
+      .catch(() => {})
+      .finally(() => setMembersLoading(false))
+  }, [orgId])
+
   return (
     <main className="p-4">
       <Tabs defaultValue="account" className="w-full">
-        <TabsList className="mb-3 grid w-full grid-cols-2">
+        <TabsList className="mb-3 grid w-full grid-cols-3">
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="password">Password</TabsTrigger>
+          <TabsTrigger value="team">Team access</TabsTrigger>
         </TabsList>
 
         <TabsContent value="account">
@@ -110,6 +144,51 @@ export default function Page() {
               <Button type="submit" disabled={!newPassword || newPassword !== confirmPassword}>Update password</Button>
             </div>
           </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="team">
+          <Card>
+            <CardContent className="pt-4 space-y-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-medium">Team members</div>
+                  <div className="text-sm text-muted-foreground">Allow coworkers to manage this organization.</div>
+                </div>
+                <Button
+                  onClick={() => {
+                    if (!orgId) return
+                    // After Google login, callback page will link this Google account to the org and redirect back
+                    const cb = `/auth/link-org?orgId=${encodeURIComponent(orgId)}`
+                    signIn("google", { callbackUrl: cb })
+                  }}
+                  disabled={!orgId}
+                >
+                  Add account with Google
+                </Button>
+              </div>
+
+              <div className="divide-y rounded border">
+                {membersLoading ? (
+                  <div className="p-3 text-sm text-muted-foreground">Loading members…</div>
+                ) : members.length === 0 ? (
+                  <div className="p-3 text-sm text-muted-foreground">No members yet.</div>
+                ) : (
+                  members.map((m) => (
+                    <div key={m.id} className="flex items-center gap-3 p-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={m.user.image || undefined} alt={m.user.name || m.user.email} />
+                        <AvatarFallback>{(m.user.name || m.user.email).slice(0,2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{m.user.name || m.user.email}</div>
+                        <div className="truncate text-xs text-muted-foreground">{m.user.email}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

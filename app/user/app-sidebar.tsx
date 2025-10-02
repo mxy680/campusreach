@@ -39,7 +39,7 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/user/dashboard", icon: IconDashboard },
   { title: "Profile", url: "/user/profile", icon: IconUserCircle },
-  { title: "Opportunities", url: "/user/opportunities", icon: IconHeartHandshake },
+  { title: "Explore", url: "/user/opportunities", icon: IconHeartHandshake },
   { title: "Messaging", url: "/user/messaging", icon: IconMessage2 },
   { title: "Resources", url: "/user/resources", icon: IconHelp },
   { title: "Settings", url: "/user/settings", icon: IconSettings },

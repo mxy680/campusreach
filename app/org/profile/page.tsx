@@ -32,6 +32,11 @@ const CATEGORY_OPTIONS = [
   "Community",
   "Arts",
   "Sports",
+  "Animals",
+  "Elderly",
+  "Food",
+  "Technology",
+  "Advocacy",
 ]
 
 export default function Page() {

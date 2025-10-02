@@ -25,7 +25,7 @@ export function OpportunityCard({ o }: { o: Opportunity }) {
       if (!res.ok) throw new Error("Failed to sign up")
       setJoined(true)
       setJoinedCount((c) => c + 1)
-      toast.success("You're signed up for this opportunity")
+      toast("You're signed up for this opportunity")
     } catch {
       toast.error("Could not sign up. Please try again.")
     } finally {
