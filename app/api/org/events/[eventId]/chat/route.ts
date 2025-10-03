@@ -4,14 +4,14 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 // GET /api/org/events/[eventId]/chat?cursor=&limit=
-export async function GET(req: NextRequest, { params }: { params: { eventId: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ eventId: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
   const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, 100)
   const cursor = searchParams.get("cursor") || undefined
-  const eventId = params.eventId
+  const { eventId } = await context.params
 
   // Permission: user must be an org member of the event's organization, or a volunteer signed up to the event
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, organizationId: true } })
@@ -21,14 +21,30 @@ export async function GET(req: NextRequest, { params }: { params: { eventId: str
     ? !!(await prisma.organizationMember.findFirst({ where: { organizationId: event.organizationId, userId: session.user.id }, select: { id: true } }))
     : false
 
+  // Fallback: allow if user's email matches organization email/contactEmail
+  let emailMatchesOrg = false
+  if (event.organizationId && !isOrgMember) {
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+    if (user?.email) {
+      const org = await prisma.organization.findUnique({ where: { id: event.organizationId }, select: { email: true, contactEmail: true } })
+      emailMatchesOrg = !!(org && (org.email === user.email || org.contactEmail === user.email))
+    }
+  }
+
   const isVolunteerInEvent = !!(await prisma.eventSignup.findFirst({ where: { eventId, volunteer: { userId: session.user.id } }, select: { id: true } }))
 
-  if (!isOrgMember && !isVolunteerInEvent) {
+  if (!isOrgMember && !isVolunteerInEvent && !emailMatchesOrg) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
+  // Ensure there's a group chat for this event
+  let gc = await prisma.groupChat.findUnique({ where: { eventId } })
+  if (!gc) {
+    gc = await prisma.groupChat.create({ data: { eventId } })
+  }
+
   const messages = await prisma.chatMessage.findMany({
-    where: { eventId },
+    where: { groupChatId: gc.id },
     orderBy: { createdAt: "asc" },
     take: limit,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
@@ -38,7 +54,6 @@ export async function GET(req: NextRequest, { params }: { params: { eventId: str
       kind: true,
       body: true,
       user: { select: { id: true, name: true, image: true, email: true } },
-      organization: { select: { id: true, name: true, logoUrl: true, slug: true } },
     },
   })
 
@@ -49,11 +64,11 @@ export async function GET(req: NextRequest, { params }: { params: { eventId: str
 
 // POST /api/org/events/[eventId]/chat
 // body: { body: string, kind?: "MESSAGE" | "ANNOUNCEMENT" }
-export async function POST(req: NextRequest, { params }: { params: { eventId: string } }) {
+export async function POST(req: NextRequest, context: { params: Promise<{ eventId: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const eventId = params.eventId
+  const { eventId } = await context.params
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, organizationId: true } })
   if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 })
 
@@ -69,19 +84,33 @@ export async function POST(req: NextRequest, { params }: { params: { eventId: st
 
   // Permit posting if org member or signed-up volunteer
   const isVolunteerInEvent = !!(await prisma.eventSignup.findFirst({ where: { eventId, volunteer: { userId: session.user.id } }, select: { id: true } }))
-  if (!isOrgMember && !isVolunteerInEvent) {
+  // Fallback: allow if user's email matches organization email/contactEmail
+  let emailMatchesOrg = false
+  if (event.organizationId && !isOrgMember) {
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+    if (user?.email) {
+      const org = await prisma.organization.findUnique({ where: { id: event.organizationId }, select: { email: true, contactEmail: true } })
+      emailMatchesOrg = !!(org && (org.email === user.email || org.contactEmail === user.email))
+    }
+  }
+
+  if (!isOrgMember && !isVolunteerInEvent && !emailMatchesOrg) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const resolvedKind: "MESSAGE" | "ANNOUNCEMENT" = kind === "ANNOUNCEMENT" && isOrgMember ? "ANNOUNCEMENT" : "MESSAGE"
 
+  // Ensure there's a group chat
+  let gc = await prisma.groupChat.findUnique({ where: { eventId } })
+  if (!gc) gc = await prisma.groupChat.create({ data: { eventId } })
+
   const msg = await prisma.chatMessage.create({
     data: {
-      eventId,
+      groupChatId: gc.id,
       body: body.trim(),
-      kind: resolvedKind as any,
+      kind: resolvedKind,
+      authorType: "USER",
       userId: session.user.id,
-      orgId: isOrgMember ? event.organizationId : null,
     },
     select: {
       id: true,
@@ -89,7 +118,6 @@ export async function POST(req: NextRequest, { params }: { params: { eventId: st
       kind: true,
       body: true,
       user: { select: { id: true, name: true, image: true, email: true } },
-      organization: { select: { id: true, name: true, logoUrl: true, slug: true } },
     },
   })
 

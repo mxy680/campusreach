@@ -76,6 +76,21 @@ export async function POST(req: Request) {
       },
     });
 
+    // Ensure GroupChat exists and seed a system welcome message
+    try {
+      const gc = await prisma.groupChat.create({ data: { eventId: created.id } })
+      await prisma.chatMessage.create({
+        data: {
+          groupChat: { connect: { id: gc.id } },
+          authorType: "SYSTEM",
+          kind: "ANNOUNCEMENT",
+          body: `Welcome to the group chat for "${title}"!`,
+        },
+      })
+    } catch (e) {
+      console.warn("Failed to seed initial group chat/message", e)
+    }
+
     return NextResponse.json({ id: created.id }, { status: 201 });
   } catch (err) {
     console.error("POST /api/org/events error", err);

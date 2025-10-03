@@ -1,13 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { IconSpeakerphone, IconSend } from "@tabler/icons-react"
+import { IconSend } from "@tabler/icons-react"
 
 function useEventChat(eventId: string | undefined) {
   const [messages, setMessages] = React.useState<Array<{ id: string; createdAt: string; kind: "MESSAGE" | "ANNOUNCEMENT"; body: string; user?: { name?: string | null; image?: string | null }; organization?: { name: string | null } }>>([])
@@ -20,11 +18,24 @@ function useEventChat(eventId: string | undefined) {
     try {
       const qs = new URLSearchParams()
       if (cursor) qs.set("cursor", cursor)
-      qs.set("limit", "50")
+      qs.set("limit", "500")
       const res = await fetch(`/api/org/events/${encodeURIComponent(eventId)}/chat?${qs.toString()}`, { cache: "no-store" })
       if (!res.ok) return
       const json = await res.json()
-      setMessages((prev) => [...prev, ...(json?.data ?? [])])
+      setMessages((prev) => {
+        const incoming = (json?.data ?? []) as typeof prev
+        // If no cursor (initial fetch), replace; otherwise append and de-duplicate by id
+        const combined = cursor ? [...prev, ...incoming] : incoming
+        const seen = new Set<string>()
+        const dedup: typeof prev = []
+        for (const m of combined) {
+          if (!seen.has(m.id)) {
+            seen.add(m.id)
+            dedup.push(m)
+          }
+        }
+        return dedup
+      })
       setCursor(json?.nextCursor ?? null)
     } finally {
       setLoading(false)
@@ -40,95 +51,61 @@ function useEventChat(eventId: string | undefined) {
     fetchMore()
   }, [fetchMore])
 
-  return { messages, loading, fetchMore }
+  const resetAndRefetch = React.useCallback(() => {
+    setMessages([])
+    setCursor(null)
+    fetchMore()
+  }, [fetchMore])
+
+  return { messages, loading, fetchMore, resetAndRefetch }
 }
 
 export default function OrgEventChatPage() {
   const params = useParams<{ id: string }>()
   const eventId = params?.id
-  const { messages, loading, fetchMore } = useEventChat(eventId)
+  const { messages, loading, fetchMore, resetAndRefetch } = useEventChat(eventId)
   const [text, setText] = React.useState("")
-  const [announcement, setAnnouncement] = React.useState(false)
+  // Simple composer (no announcement toggle on this view)
 
   async function send() {
     if (!eventId || !text.trim()) return
     const body = text.trim()
     setText("")
-    const optimistic = {
-      id: `temp-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      kind: announcement ? "ANNOUNCEMENT" as const : "MESSAGE" as const,
-      body,
-    }
-    // Optimistic
-    ;(window as any)._setChatMessages?.((prev: any[]) => [...prev, optimistic])
     try {
       const res = await fetch(`/api/org/events/${encodeURIComponent(eventId)}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body, kind: announcement ? "ANNOUNCEMENT" : "MESSAGE" }),
+        body: JSON.stringify({ body, kind: "MESSAGE" }),
       })
       if (!res.ok) throw new Error("send")
+      // Refetch to replace entirely and avoid duplicate keys
+      resetAndRefetch()
     } catch {
-      // If failed, just refetch to reconcile
-      fetchMore()
+      // If failed, reset and refetch to replace
+      resetAndRefetch()
     }
   }
 
-  // Expose setter for optimistic update
-  React.useEffect(() => {
-    ;(window as any)._setChatMessages = (updater: (prev: any[]) => any[]) => {
-      try {
-        // basic in-place optimistic update helper
-        const next = updater(messages)
-        ;(window as any)._chatMessagesSnapshot = next
-      } catch {}
-    }
-    return () => { delete (window as any)._setChatMessages }
-  }, [messages])
-
   return (
-    <main className="flex h-[calc(100dvh-60px)] flex-col p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Chat</h1>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant={announcement ? "destructive" : "outline"}
-            size="sm"
-            onClick={() => setAnnouncement((v) => !v)}
-            className="gap-1"
-            title="Toggle announcement"
-          >
-            <IconSpeakerphone className="size-4" />
-            {announcement ? "Announcement" : "Message"}
-          </Button>
-        </div>
-      </div>
-
+    <main className="flex h-[calc(100dvh-60px)] flex-col p-4 md:p-6">
       <Card className="flex min-h-0 flex-1 flex-col">
         <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-          <div className="min-h-0 flex-1 overflow-auto p-3 space-y-2">
+          <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6 space-y-3">
             {messages.map((m) => (
               <div key={m.id} className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{new Date(m.createdAt).toLocaleString()}</span>
-                  {m.kind === "ANNOUNCEMENT" && <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px]">Announcement</Badge>}
                 </div>
-                <div className={`rounded-md border p-2 ${m.kind === "ANNOUNCEMENT" ? "bg-amber-50 border-amber-200" : "bg-background"}`}>
-                  <p className="whitespace-pre-wrap text-sm">{m.body}</p>
+                <div className="rounded-md border bg-background p-3">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.body}</p>
                 </div>
               </div>
             ))}
-            {!loading && (
-              <div className="flex justify-center">
-                <Button variant="ghost" size="sm" onClick={fetchMore}>Load more</Button>
-              </div>
-            )}
+            {/* Load more removed; fetching a larger page size instead */}
           </div>
-          <div className="border-t p-2 flex items-center gap-2">
+          <div className="border-t p-3 md:p-4 flex items-center gap-2">
             <Input
-              placeholder={announcement ? "Write an announcement..." : "Write a message..."}
+              placeholder="Write a message..."
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {

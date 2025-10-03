@@ -9,14 +9,26 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   // Find organizations the user can manage
-  const orgIds = (
+  let orgIds = (
     await prisma.organizationMember.findMany({
       where: { userId: session.user.id },
       select: { organizationId: true },
     })
   ).map((m) => m.organizationId)
 
-  if (orgIds.length === 0) return NextResponse.json({ data: [] })
+  // Fallback: derive org by matching user's email to organization.email or contactEmail
+  if (orgIds.length === 0) {
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+    if (user?.email) {
+      const orgs = await prisma.organization.findMany({
+        where: { OR: [ { email: user.email }, { contactEmail: user.email } ] },
+        select: { id: true },
+        take: 5,
+      })
+      orgIds = orgs.map(o => o.id)
+    }
+    if (orgIds.length === 0) return NextResponse.json({ data: [] })
+  }
 
   // Find recent events for these orgs
   const events = await prisma.event.findMany({
@@ -34,20 +46,22 @@ export async function GET() {
 
   const rows = await Promise.all(
     events.map(async (e) => {
+      const gc = await prisma.groupChat.findUnique({ where: { eventId: e.id } })
       const [last, messageCount] = await Promise.all([
-        prisma.chatMessage.findFirst({
-          where: { eventId: e.id },
-          orderBy: { createdAt: "desc" },
-          select: {
-            id: true,
-            createdAt: true,
-            kind: true,
-            body: true,
-            user: { select: { id: true, name: true } },
-            organization: { select: { id: true, name: true } },
-          },
-        }),
-        prisma.chatMessage.count({ where: { eventId: e.id } }),
+        gc
+          ? prisma.chatMessage.findFirst({
+              where: { groupChatId: gc.id },
+              orderBy: { createdAt: "desc" },
+              select: {
+                id: true,
+                createdAt: true,
+                kind: true,
+                body: true,
+                user: { select: { id: true, name: true } },
+              },
+            })
+          : Promise.resolve(null),
+        gc ? prisma.chatMessage.count({ where: { groupChatId: gc.id } }) : Promise.resolve(0),
       ])
 
       return {
@@ -65,7 +79,7 @@ export async function GET() {
               createdAt: last.createdAt.toISOString(),
               kind: last.kind,
               body: last.body,
-              author: last.organization?.name ?? last.user?.name ?? "",
+              author: last.user?.name ?? "",
             }
           : null,
       }

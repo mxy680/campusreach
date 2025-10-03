@@ -117,8 +117,6 @@ model Organization {
   resources     Resource[]
   /// Members (users) that can manage this organization
   members       OrganizationMember[]
-  /// Backref: messages sent as organization in event chats
-  chatMessages  ChatMessage[]
 
   /// Additional contacts
   contacts      OrganizationContact[]
@@ -193,8 +191,10 @@ model Event {
   // Signups
   signups     EventSignup[]
   timeEntries TimeEntry[]
-  /// Group chat messages (GroupMe-like) for this event
-  chatMessages ChatMessage[]
+  /// Group chat for this event (one chat per event)
+  groupChat   GroupChat?
+  /// Backref for legacy messages during migration
+  messages    ChatMessage[]
 }
 
 /// A volunteer signing up for an event
@@ -225,21 +225,38 @@ enum ChatMessageKind {
   ANNOUNCEMENT /// organization announcement
 }
 
-/// Group chat messages per event. One implicit groupchat per Event.
+/// One group chat per event
+model GroupChat {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  createdAt DateTime @default(now())
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+}
+
+/// Author type for messages
+enum MessageAuthorType {
+  USER
+  SYSTEM
+}
+
+/// Group chat messages
 model ChatMessage {
-  id        String           @id @default(cuid())
-  eventId   String
-  userId    String?          /// when sent by a user (volunteer or org member)
-  orgId     String?          /// when sent by an organization (system/announcement)
-  kind      ChatMessageKind  @default(MESSAGE)
-  body      String
+  id           String            @id @default(cuid())
+  groupChatId  String?
+  eventId      String?
+  userId       String?
+  authorType   MessageAuthorType @default(USER)
+  kind         ChatMessageKind   @default(MESSAGE)
+  body         String
+  createdAt    DateTime          @default(now())
 
-  createdAt DateTime         @default(now())
+  groupChat GroupChat? @relation(fields: [groupChatId], references: [id], onDelete: Cascade)
+  event     Event?     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  event      Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  organization Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
-
+  @@index([groupChatId, createdAt])
   @@index([eventId, createdAt])
 }
 
