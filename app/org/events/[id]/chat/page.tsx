@@ -91,16 +91,49 @@ export default function OrgEventChatPage() {
       <Card className="flex min-h-0 flex-1 flex-col">
         <CardContent className="flex min-h-0 flex-1 flex-col p-0">
           <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6 space-y-3">
-            {messages.map((m) => (
-              <div key={m.id} className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{new Date(m.createdAt).toLocaleString()}</span>
-                </div>
-                <div className="rounded-md border bg-background p-3">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.body}</p>
-                </div>
-              </div>
-            ))}
+            {(() => {
+              let lastDay = ""
+              const items: React.ReactNode[] = []
+              for (const m of messages) {
+                const d = new Date(m.createdAt)
+                const dayKey = d.toISOString().slice(0, 10) // YYYY-MM-DD
+                if (dayKey !== lastDay) {
+                  lastDay = dayKey
+                  items.push(
+                    <div key={`sep-${dayKey}`} className="sticky top-0 z-0 my-2 flex items-center gap-2">
+                      <div className="h-px flex-1 bg-border" />
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {d.toLocaleDateString()}
+                      </div>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+                  )
+                }
+                const author = m.user?.name || "CampusReach"
+                const avatar = m.user?.image
+                items.push(
+                  <div key={m.id} className="flex items-start gap-3">
+                    {avatar ? (
+                      <img src={avatar} alt={author} className="mt-0.5 size-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="mt-0.5 flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground/70">
+                        {(author || "C").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-0.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span className="truncate font-medium text-foreground">{author}</span>
+                        <span>{d.toLocaleTimeString()}</span>
+                      </div>
+                      <div className="rounded-md border bg-background p-3">
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.body}</p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              return items
+            })()}
             {/* Load more removed; fetching a larger page size instead */}
           </div>
           <div className="border-t p-3 md:p-4 flex items-center gap-2">
