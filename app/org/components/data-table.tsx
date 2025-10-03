@@ -105,6 +105,7 @@ function formatDateTimeUTC(iso?: string | null): string {
 export const schema = z.object({
   id: z.number(),
   volunteerId: z.string().optional().nullable(),
+  volunteerSlug: z.string().optional().nullable(),
   volunteerName: z.string(),
   pronouns: z.string().optional().nullable(),
   major: z.string().optional().nullable(),
@@ -267,7 +268,10 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
           variant="outline"
           size="icon"
           className="size-7"
-          onClick={() => (table.options.meta as unknown as TableMeta)?.deleteRow?.(row.original)}
+          onClick={(e) => {
+            e.stopPropagation()
+            ;(table.options.meta as unknown as TableMeta)?.deleteRow?.(row.original)
+          }}
           aria-label="Delete row"
         >
           <IconTrash className="size-4" />
@@ -287,7 +291,13 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80 hover:bg-accent/40 cursor-pointer"
+      onClick={() => {
+        const slug = row.original.volunteerSlug
+        if (slug) {
+          window.open(`/v/${slug}` , "_blank", "noopener,noreferrer")
+        }
+      }}
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,

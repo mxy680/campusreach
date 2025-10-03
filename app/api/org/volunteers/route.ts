@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
       volunteer: {
         select: {
           id: true,
+          slug: true,
           firstName: true,
           lastName: true,
           pronouns: true,
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
   const rows = signups.map((s, idx) => ({
     id: idx + 1, // table expects a number id
     volunteerId: s.volunteer?.id ?? undefined,
+    volunteerSlug: s.volunteer?.slug ?? undefined,
     volunteerName: `${s.volunteer?.firstName ?? ""} ${s.volunteer?.lastName ?? ""}`.trim() || "Unknown",
     pronouns: s.volunteer?.pronouns ?? undefined,
     major: s.volunteer?.major ?? undefined,

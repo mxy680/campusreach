@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       orderBy: { startsAt: "asc" },
       take: 60,
       include: {
-        organization: { select: { name: true, categories: true } },
+        organization: { select: { name: true, categories: true, slug: true } },
         _count: { select: { signups: true } },
         signups: { select: { volunteerId: true, volunteer: { select: { firstName: true, lastName: true } } } },
       },
@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
       id: e.id,
       title: e.title,
       org: e.organization?.name ?? "",
+      orgSlug: e.organization?.slug ?? undefined,
       teaser: (e.shortDescription ?? "").replace(/Location:\s*[^\n]+/i, "").trim(),
       start: e.startsAt.toISOString(),
       end: e.endsAt ? e.endsAt.toISOString() : undefined,
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
       orderBy: { startsAt: "asc" },
       take: 60,
       include: {
-        organization: { select: { name: true, categories: true } },
+        organization: { select: { name: true, categories: true, slug: true } },
         _count: { select: { signups: true } },
         signups: { select: { volunteer: { select: { firstName: true, lastName: true } } } },
       },
@@ -100,6 +101,7 @@ export async function GET(req: NextRequest) {
       id: e.id,
       title: e.title,
       org: e.organization?.name ?? "",
+      orgSlug: e.organization?.slug ?? undefined,
       teaser: (e.shortDescription ?? "").replace(/Location:\s*[^\n]+/i, "").trim(),
       start: e.startsAt.toISOString(),
       end: e.endsAt ? e.endsAt.toISOString() : undefined,

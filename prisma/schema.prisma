@@ -32,9 +32,9 @@ model User {
   role                    Role                    @default(VOLUNTEER)
   hashedPassword          String?
   notifications           NotificationPreference?
-  conversations           Conversation[]
-  messages                Message[]               @relation("UserMessages")
   organizationMemberships OrganizationMember[]
+  /// Backref: messages authored by this user in event chats
+  chatMessages            ChatMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -115,12 +115,10 @@ model Organization {
   events        Event[]
   /// Resources published by this organization
   resources     Resource[]
-  /// Conversations with volunteers
-  conversations Conversation[]
-  /// Messages sent from this organization
-  messages      Message[]     @relation("OrgMessages")
   /// Members (users) that can manage this organization
   members       OrganizationMember[]
+  /// Backref: messages sent as organization in event chats
+  chatMessages  ChatMessage[]
 
   /// Additional contacts
   contacts      OrganizationContact[]
@@ -164,7 +162,6 @@ model Volunteer {
   // Relations
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   signups       EventSignup[]
-  conversations Conversation[]
   timeEntries   TimeEntry[]
 
   createdAt DateTime @default(now())
@@ -196,6 +193,8 @@ model Event {
   // Signups
   signups     EventSignup[]
   timeEntries TimeEntry[]
+  /// Group chat messages (GroupMe-like) for this event
+  chatMessages ChatMessage[]
 }
 
 /// A volunteer signing up for an event
@@ -220,37 +219,30 @@ enum SignupStatus {
   CANCELLED
 }
 
-/// A conversation between a volunteer (user) and an organization
-model Conversation {
-  id              String  @id @default(cuid())
-  subject         String
-  volunteerId     String?
-  organizationId  String?
-  createdByUserId String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  volunteer    Volunteer?    @relation(fields: [volunteerId], references: [id], onDelete: SetNull)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  createdBy    User          @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
-  messages     Message[]
+/// Message types within an event group chat
+enum ChatMessageKind {
+  MESSAGE      /// regular user/org message
+  ANNOUNCEMENT /// organization announcement
 }
 
-/// Individual messages within a conversation
-model Message {
-  id             String  @id @default(cuid())
-  conversationId String
-  fromUserId     String? // when sent by a user
-  fromOrgId      String? // when sent by an org system user
-  body           String
+/// Group chat messages per event. One implicit groupchat per Event.
+model ChatMessage {
+  id        String           @id @default(cuid())
+  eventId   String
+  userId    String?          /// when sent by a user (volunteer or org member)
+  orgId     String?          /// when sent by an organization (system/announcement)
+  kind      ChatMessageKind  @default(MESSAGE)
+  body      String
 
-  createdAt DateTime @default(now())
+  createdAt DateTime         @default(now())
 
-  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  fromUser     User?         @relation("UserMessages", fields: [fromUserId], references: [id], onDelete: SetNull)
-  fromOrg      Organization? @relation("OrgMessages", fields: [fromOrgId], references: [id], onDelete: SetNull)
+  event      Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+
+  @@index([eventId, createdAt])
 }
+
 
 /// Learning materials and links
 model Resource {

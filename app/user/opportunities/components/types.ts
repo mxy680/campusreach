@@ -4,6 +4,7 @@ export type Opportunity = {
   id: string
   title: string
   org: string
+  orgSlug?: string
   teaser: string
   start: string // ISO
   end?: string // ISO
