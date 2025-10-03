@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       include: {
         organization: { select: { name: true, categories: true } },
         _count: { select: { signups: true } },
-        signups: { where: { volunteerId: myVolunteerId }, select: { id: true } },
+        signups: { select: { volunteerId: true, volunteer: { select: { firstName: true, lastName: true } } } },
       },
     })
 
@@ -76,10 +76,11 @@ export async function GET(req: NextRequest) {
       })(),
       need: e.volunteersNeeded,
       joined: e._count.signups,
+      attendees: e.signups.map((s) => `${s.volunteer.firstName} ${s.volunteer.lastName}`.trim()).slice(0, 8),
       skills: (e.specialties ?? []) as string[],
       hours: e.timeCommitmentHours ?? undefined,
       notes: e.notes ?? undefined,
-      alreadyJoined: (e.signups ?? []).length > 0,
+      alreadyJoined: (e.signups ?? []).some((s) => s.volunteerId === myVolunteerId),
     }))
 
     return NextResponse.json({ data: rows })
@@ -91,6 +92,7 @@ export async function GET(req: NextRequest) {
       include: {
         organization: { select: { name: true, categories: true } },
         _count: { select: { signups: true } },
+        signups: { select: { volunteer: { select: { firstName: true, lastName: true } } } },
       },
     })
 
@@ -111,6 +113,7 @@ export async function GET(req: NextRequest) {
       })(),
       need: e.volunteersNeeded,
       joined: e._count.signups,
+      attendees: e.signups.map((s) => `${s.volunteer.firstName} ${s.volunteer.lastName}`.trim()).slice(0, 8),
       skills: (e.specialties ?? []) as string[],
       hours: e.timeCommitmentHours ?? undefined,
       notes: e.notes ?? undefined,
