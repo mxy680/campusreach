@@ -3,6 +3,7 @@
 import * as React from "react"
 const SaveButton = React.lazy(() => import("./SaveButton"))
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { Save as SaveIcon, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -45,6 +46,7 @@ export default function Page() {
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
   const [orgId, setOrgId] = React.useState<string | null>(null)
+  const [slug, setSlug] = React.useState<string>("")
   const [logoFile, setLogoFile] = React.useState<File | null>(null)
   const [data, setData] = React.useState<OrgProfile>(() => ({
     logoUrl: "",
@@ -101,6 +103,7 @@ export default function Page() {
         if (!r2.ok) return
         const j2 = await r2.json()
         const p: Partial<OrgProfile> = (j2?.data ?? {}) as Partial<OrgProfile>
+        const fetchedSlug = (j2?.data as any)?.slug as string | undefined
         setData({
           logoUrl: p?.logoUrl ?? "",
           description: p?.description ?? "",
@@ -123,6 +126,7 @@ export default function Page() {
               }))
             : [],
         })
+        setSlug(fetchedSlug || "")
       } catch {
         // no-op
       } finally {
@@ -179,13 +183,24 @@ export default function Page() {
           <p className="text-sm text-muted-foreground">Add details and links to help students recognize your org.</p>
         </div>
         <div className="flex items-center gap-2">
-        {loading ? (
-          <div className="text-xs text-muted-foreground">Loading…</div>
-        ) : (
-          <React.Suspense fallback={<Button size="sm" disabled>Loading…</Button>}>
-            <SaveButton saving={saving} onSave={onSave} />
-          </React.Suspense>
-        )}
+          {loading ? (
+            <div className="text-xs text-muted-foreground">Loading…</div>
+          ) : (
+            <>
+              <React.Suspense fallback={<Button size="sm" disabled>Loading…</Button>}>
+                <SaveButton saving={saving} onSave={onSave} />
+              </React.Suspense>
+              {slug ? (
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={`/o/${slug}`} target="_blank" rel="noreferrer">View public profile</Link>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" disabled>
+                  View public profile
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

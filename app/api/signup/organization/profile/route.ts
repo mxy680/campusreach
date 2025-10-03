@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -30,13 +31,15 @@ export async function POST(req: Request) {
       data: { role: "ORGANIZATION" },
     });
 
-    // Create an Organization record (no user relation yet in schema)
+    // Create an Organization record with a unique slug derived from user id
+    const slug = crypto.createHash("sha256").update(session.user.id).digest("hex").slice(0, 16)
     await prisma.organization.create({
       data: {
         name,
         industry: field,
         email: session.user.email ?? null,
         website: website || null,
+        slug,
       },
     });
 

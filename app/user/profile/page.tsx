@@ -8,6 +8,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 type ProfileForm = {
   firstName: string
@@ -25,6 +26,7 @@ type ProfileForm = {
 export default function Page() {
   const { data: session } = useSession()
   const email = session?.user?.email ?? ""
+  const [slug, setSlug] = React.useState<string>("")
   const [form, setForm] = React.useState<ProfileForm>({
     firstName: "",
     lastName: "",
@@ -102,6 +104,7 @@ export default function Page() {
         const json = await r.json()
         const p = json?.profile as
           | {
+              slug?: string | null
               firstName: string
               lastName: string
               school?: string
@@ -114,6 +117,7 @@ export default function Page() {
             }
           | null
         if (p) {
+          setSlug((p.slug as string) || "")
           setForm((f) => ({
             ...f,
             firstName: p.firstName ?? "",
@@ -302,6 +306,13 @@ export default function Page() {
             </div>
 
             <div className="md:col-span-2 flex items-center justify-end gap-2 pt-1">
+              {slug ? (
+                <Button variant="outline" asChild size="sm">
+                  <Link href={`/v/${slug}`} target="_blank" rel="noreferrer">View public profile</Link>
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" disabled>View public profile</Button>
+              )}
               <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save profile"}</Button>
             </div>
             {/* Datalists removed in favor of Select dropdowns */}

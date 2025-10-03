@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
       image: true,
       volunteer: {
         select: {
+          slug: true,
           id: true,
           firstName: true,
           lastName: true,
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
     user: { id: user.id, name: user.name, email: user.email, image: user.image ?? null },
     profile: v
       ? {
+          slug: v.slug ?? null,
           firstName: v.firstName,
           lastName: v.lastName,
           school: v.school ?? "",

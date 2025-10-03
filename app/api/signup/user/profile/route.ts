@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -28,10 +29,14 @@ export async function POST(req: Request) {
     // For the CWRU signup flow, school is fixed.
     const school = "Case Western Reserve University";
 
+    // Stable 16-char slug from user id
+    const slug = crypto.createHash("sha256").update(session.user.id).digest("hex").slice(0, 16)
+
     await prisma.volunteer.upsert({
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
+        slug,
         firstName,
         lastName,
         pronouns: pronouns || null,
@@ -40,6 +45,8 @@ export async function POST(req: Request) {
         graduationDate: gradAt,
       },
       update: {
+        // Only set slug if missing
+        slug: undefined,
         firstName,
         lastName,
         pronouns: pronouns || null,

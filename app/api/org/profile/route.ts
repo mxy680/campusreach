@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
     where: { id: orgId },
     select: {
       id: true,
+      slug: true,
       name: true,
       logoUrl: true,
       description: true,
