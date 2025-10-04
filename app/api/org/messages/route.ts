@@ -14,30 +14,23 @@ export async function GET() {
   const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
   if (!org?.id) return NextResponse.json({ data: [] })
 
-  const convos = await prisma.conversation.findMany({
-    where: { organizationId: org.id },
-    orderBy: { updatedAt: "desc" },
+  const msgs = await prisma.chatMessage.findMany({
+    where: { event: { organizationId: org.id } },
+    orderBy: { createdAt: "desc" },
     take: 20,
-    select: {
-      id: true,
-      subject: true,
-      updatedAt: true,
-      volunteer: {
-        select: {
-          user: { select: { name: true, email: true } },
-        },
-      },
-      messages: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true, body: true } },
+    include: {
+      user: { select: { name: true, email: true } },
+      event: { select: { title: true } },
     },
   })
 
-  const rows = convos.map((c) => ({
-    id: c.id,
-    name: c.volunteer?.user?.name ?? "Volunteer",
-    email: c.volunteer?.user?.email ?? "",
-    subject: c.subject,
-    date: (c.messages[0]?.createdAt ?? c.updatedAt).toISOString(),
-    teaser: c.messages[0]?.body ?? "",
+  const rows = msgs.map((m) => ({
+    id: m.id,
+    name: m.user?.name ?? "Volunteer",
+    email: m.user?.email ?? "",
+    subject: m.event?.title ?? "Event",
+    date: m.createdAt.toISOString(),
+    teaser: m.body,
   }))
 
   return NextResponse.json({ data: rows })

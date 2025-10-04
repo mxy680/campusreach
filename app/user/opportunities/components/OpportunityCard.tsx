@@ -9,6 +9,7 @@ import { IconCalendar, IconMapPin, IconUsers, IconClock, IconExternalLink } from
 import type { Opportunity } from "./types"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import Image from "next/image"
 
 const fmt = (iso: string) => new Date(iso).toLocaleString(undefined, { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })
 
@@ -173,12 +174,9 @@ export function OpportunityCard({ o }: { o: Opportunity }) {
                           const isImg = [".png", ".jpg", ".jpeg", ".webp", ".gif"].some((ext) => lower.includes(ext))
                           return isImg ? (
                             <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
-                              <img
-                                src={url}
-                                alt={`attachment-${i+1}`}
-                                className="h-20 w-20 object-cover rounded border"
-                                loading="lazy"
-                              />
+                              <div className="h-20 w-20 overflow-hidden rounded border relative">
+                                <Image src={url} alt={`attachment-${i+1}`} fill sizes="80px" className="object-cover" />
+                              </div>
                             </a>
                           ) : (
                             <a key={i} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline underline-offset-2">

@@ -4,6 +4,7 @@ import * as React from "react"
 import { useSession } from "next-auth/react"
 import { CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { IconMessage2 } from "@tabler/icons-react"
 
 export default function MessagesPreviewSection({ className = "" }: { className?: string }) {
@@ -29,7 +30,7 @@ export default function MessagesPreviewSection({ className = "" }: { className?:
           <IconMessage2 className="size-8 text-muted-foreground" />
           <div className="text-sm text-muted-foreground">No messages yet.</div>
           <Button size="sm" asChild>
-            <a href="/user/messaging">Send a message</a>
+            <Link href="/user/messaging">Send a message</Link>
           </Button>
         </div>
       ) : (
@@ -37,7 +38,7 @@ export default function MessagesPreviewSection({ className = "" }: { className?:
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium">Messages</div>
             <Button size="sm" variant="ghost" asChild>
-              <a href="/user/messaging">See all</a>
+              <Link href="/user/messaging">See all</Link>
             </Button>
           </div>
           <ul className="divide-y rounded-md border">

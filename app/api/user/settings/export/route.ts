@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   })
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-  const [timeEntries, signups, conversations] = await Promise.all([
+  const [timeEntries, signups, userMessages] = await Promise.all([
     prisma.timeEntry.findMany({
       where: { volunteer: { userId: user.id } },
       orderBy: { date: "asc" },
@@ -49,20 +49,12 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.conversation.findMany({
-      where: { OR: [{ createdByUserId: user.id }, { volunteer: { userId: user.id } }] },
-      select: {
-        id: true,
-        subject: true,
-        createdAt: true,
-        updatedAt: true,
-        organization: { select: { id: true, name: true } },
-        messages: {
-          select: { id: true, createdAt: true, body: true, fromUserId: true, fromOrgId: true },
-          orderBy: { createdAt: "asc" },
-        },
+    prisma.chatMessage.findMany({
+      where: { userId: user.id },
+      include: {
+        event: { select: { id: true, title: true, startsAt: true, location: true, organization: { select: { id: true, name: true } } } },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { createdAt: "asc" },
     }),
   ])
 
@@ -71,7 +63,23 @@ export async function GET(req: NextRequest) {
     user,
     timeEntries,
     signups,
-    conversations,
+    // Backward-compatible shape: group user messages as pseudo-conversations by event
+    conversations: userMessages.map((m) => ({
+      id: m.id,
+      subject: m.event?.title ?? "",
+      createdAt: m.createdAt,
+      updatedAt: m.createdAt,
+      organization: m.event?.organization ?? null,
+      messages: [
+        {
+          id: m.id,
+          createdAt: m.createdAt,
+          body: m.body,
+          fromUserId: m.userId,
+          fromOrgId: null as string | null,
+        },
+      ],
+    })),
   }
 
   return NextResponse.json(payload)

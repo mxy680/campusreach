@@ -46,7 +46,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub;
         const u = await prisma.user.findUnique({ where: { id: token.sub }, select: { image: true } })
         // Overwrite session image from DB every time (DB is source of truth)
-        session.user.image = u?.image ?? null as any
+        session.user.image = (u?.image ?? null)
       }
       return session;
     },

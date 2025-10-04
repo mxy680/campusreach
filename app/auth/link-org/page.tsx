@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
-export default function LinkOrgPage() {
+function LinkOrgInner() {
   const router = useRouter()
   const params = useSearchParams()
 
@@ -30,5 +31,13 @@ export default function LinkOrgPage() {
     <main className="p-6">
       <div className="text-sm text-muted-foreground">Linking your Google account to the organization…</div>
     </main>
+  )
+}
+
+export default function LinkOrgPage() {
+  return (
+    <Suspense fallback={<main className="p-6"><div className="text-sm text-muted-foreground">Preparing…</div></main>}>
+      <LinkOrgInner />
+    </Suspense>
   )
 }

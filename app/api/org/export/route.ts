@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
       filename = `signups-${org.id}.csv`
     } else if (type === "volunteers") {
       const rows = await prisma.volunteer.findMany({
-        where: { conversations: { some: { organizationId: org.id } } },
+        where: { signups: { some: { event: { organizationId: org.id } } } },
         include: { user: { select: { email: true, name: true } } },
         orderBy: { createdAt: "asc" },
       })
@@ -72,20 +72,31 @@ export async function GET(req: NextRequest) {
       csv = toCSV(flat, ["volunteerId", "name", "email", "major", "school", "phone", "createdAt"])
       filename = `volunteers-${org.id}.csv`
     } else if (type === "messages") {
-      const rows = await prisma.message.findMany({
-        where: { fromOrgId: org.id },
-        include: { conversation: { select: { subject: true } }, fromUser: { select: { email: true, name: true } } },
+      const rows = await prisma.chatMessage.findMany({
+        where: { event: { organizationId: org.id } },
+        include: {
+          event: { select: { title: true } },
+          user: { select: { name: true, email: true } },
+          groupChat: { select: { id: true } },
+        },
         orderBy: { createdAt: "asc" },
       })
-      const flat = rows.map((m) => ({
+      const flat: Array<{
+        messageId: string
+        eventTitle: string
+        authorName: string
+        authorEmail: string
+        createdAt: string
+        body: string
+      }> = rows.map((m) => ({
         messageId: m.id,
-        subject: m.conversation?.subject ?? "",
-        fromName: m.fromUser?.name ?? "",
-        fromEmail: m.fromUser?.email ?? "",
+        eventTitle: m.event?.title ?? "",
+        authorName: m.user?.name ?? "",
+        authorEmail: m.user?.email ?? "",
         createdAt: m.createdAt.toISOString(),
         body: m.body,
       }))
-      csv = toCSV(flat, ["messageId", "subject", "fromName", "fromEmail", "createdAt", "body"])
+      csv = toCSV(flat, ["messageId", "eventTitle", "authorName", "authorEmail", "createdAt", "body"])
       filename = `messages-${org.id}.csv`
     } else if (type === "account") {
       const orgInfo = await prisma.organization.findUnique({
