@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { signIn, signOut } from "next-auth/react"
+import { signIn } from "next-auth/react"
 
 export default function Page() {
   // Account info
@@ -223,16 +223,11 @@ export default function Page() {
             <div className="shrink-0">
               <Button
                 variant="destructive"
-                onClick={async () => {
-                  if (!orgId) return
-                  if (!confirm("Delete organization? This cannot be undone.")) return
-                  const r = await fetch("/api/org/delete", { method: "DELETE" })
-                  if (r.ok) {
-                    await signOut({ callbackUrl: "/" })
-                  }
-                }}
+                disabled
+                className="disabled:opacity-50 disabled:pointer-events-none"
+                title="Temporarily disabled"
               >
-                Delete organization
+                Delete organization (disabled)
               </Button>
             </div>
           </div>

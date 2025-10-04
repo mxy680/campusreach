@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { IconBell } from "@tabler/icons-react"
-import { ChartAreaLinear } from "../components/chart-area-linear"
+import { Pie, PieChart } from "recharts"
+import { ChartContainer, type ChartConfig, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { ChartBarMultiple, type PlatformBarDatum } from "../components/chart-bar-multiple"
 import { ChartBarSingle } from "../components/chart-bar-single"
 
@@ -16,18 +17,17 @@ export default function Page() {
     { id: "a5", title: "Export Reports", body: "Download monthly summaries of sign-ups and hours from the dashboard.", date: "2025-09-27" },
   ]
 
-  // Sign-ups: fetch last 6 months for the active organization
+  // Active organization id
   const [orgId, setOrgId] = React.useState<string | null>(null)
-  const [signupsData, setSignupsData] = React.useState<{ month: string; signups: number }[]>(() => {
-    const now = new Date()
-    const months: { month: string; signups: number }[] = []
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now)
-      d.setMonth(now.getMonth() - i)
-      months.push({ month: d.toLocaleString(undefined, { month: "long" }), signups: 0 })
-    }
-    return months
-  })
+  // Ratings distribution for org events (1..5)
+  const [ratingCounts, setRatingCounts] = React.useState<number[]>([0, 0, 0, 0, 0])
+  const ratingChartConfig = {
+    one: { label: "1★", color: "var(--chart-1)" },
+    two: { label: "2★", color: "var(--chart-2)" },
+    three: { label: "3★", color: "var(--chart-3)" },
+    four: { label: "4★", color: "var(--chart-4)" },
+    five: { label: "5★", color: "var(--chart-5)" },
+  } satisfies ChartConfig
   React.useEffect(() => {
     // Try to detect orgId from a server hint endpoint if present; for now, load first org the user belongs to
     fetch("/api/orgs")
@@ -41,12 +41,12 @@ export default function Page() {
   }, [])
   React.useEffect(() => {
     if (!orgId) return
-    fetch(`/api/org/signups?orgId=${encodeURIComponent(orgId)}`)
+    fetch(`/api/org/ratings-distribution?orgId=${encodeURIComponent(orgId)}`)
       .then(async (r) => {
         if (!r.ok) return
         const json = await r.json()
-        const rows = (json?.data ?? []) as { month: string; signups: number }[]
-        if (Array.isArray(rows) && rows.length) setSignupsData(rows)
+        const counts = (json?.data ?? [0,0,0,0,0]) as number[]
+        if (Array.isArray(counts) && counts.length === 5) setRatingCounts(counts)
       })
       .catch(() => {})
   }, [orgId])
@@ -72,14 +72,20 @@ export default function Page() {
       })
       .catch(() => {})
   }, [orgId])
-  const rangeFooter = React.useMemo(() => {
-    if (!signupsData.length) return ""
+  const totalRatings = ratingCounts.reduce((a, b) => a + b, 0)
+  const ratingData = [
+    { key: "one", label: "1★", value: ratingCounts[0], fill: "var(--chart-1)" },
+    { key: "two", label: "2★", value: ratingCounts[1], fill: "var(--chart-2)" },
+    { key: "three", label: "3★", value: ratingCounts[2], fill: "var(--chart-3)" },
+    { key: "four", label: "4★", value: ratingCounts[3], fill: "var(--chart-4)" },
+    { key: "five", label: "5★", value: ratingCounts[4], fill: "var(--chart-5)" },
+  ]
+  const eventsFooter = React.useMemo(() => {
     const now = new Date()
     const start = new Date(now)
     start.setMonth(now.getMonth() - 5)
     return `${start.toLocaleString(undefined, { month: "short" })} - ${now.toLocaleString(undefined, { month: "short" })} ${now.getFullYear()}`
-  }, [signupsData])
-  const eventsFooter = rangeFooter
+  }, [])
 
   // Platform signups (students vs orgs)
   const [platformData, setPlatformData] = React.useState<PlatformBarDatum[]>([])
@@ -121,22 +127,72 @@ export default function Page() {
     return `Trending ${dir} by ${formatted}% this month`
   }
 
-  const signupsTrend = trendString(signupsData.map((d) => d.signups))
   const eventsTrend = trendString(eventsData.map((d) => d.events))
   return (
     <main className="p-6 space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <ChartAreaLinear
-          title="Sign-ups"
-          description="Showing student sign-ups for the last 6 months"
-          data={signupsData}
-          dataKey="signups"
-          label="Sign-ups"
-          colorVar="hsl(24 95% 55%)"
-          footerPrimary={signupsTrend || undefined}
-          footerSecondary={rangeFooter}
-        />
+        <Card className="flex flex-col">
+          <CardHeader className="pb-0">
+            <CardTitle>Event ratings</CardTitle>
+            <CardDescription>Across your events</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <ChartContainer config={ratingChartConfig} className="h-[120px] w-[120px]">
+                <PieChart>
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                  <Pie
+                    data={ratingData}
+                    dataKey="value"
+                    nameKey="label"
+                    stroke="0"
+                    innerRadius={45}
+                    outerRadius={60}
+                    paddingAngle={1}
+                  />
+                </PieChart>
+              </ChartContainer>
+              <div className="flex-1">
+                <div className="mb-2 flex items-center gap-2 text-sm">
+                  {(() => {
+                    const sum = totalRatings || 1
+                    const avg = (1*ratingCounts[0] + 2*ratingCounts[1] + 3*ratingCounts[2] + 4*ratingCounts[3] + 5*ratingCounts[4]) / sum
+                    const rounded = Math.round((avg + Number.EPSILON) * 10) / 10
+                    return (
+                      <>
+                        <span className="font-medium">Avg:</span>
+                        <span className="tabular-nums">{rounded.toFixed(1)}</span>
+                        <span className="ml-1 text-yellow-500">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <span key={i}>{i < Math.round(avg) ? "★" : "☆"}</span>
+                          ))}
+                        </span>
+                      </>
+                    )
+                  })()}
+                </div>
+                <ul className="grid gap-1 text-xs">
+                  {ratingData.filter((s) => s.value > 0).map((s) => {
+                    const pct = totalRatings ? Math.round((s.value / totalRatings) * 100) : 0
+                    return (
+                      <li key={s.key} className="flex items-center gap-2 whitespace-nowrap">
+                        <span className="h-2 w-2 shrink-0 rounded-[2px]" style={{ backgroundColor: s.fill as string }} />
+                        <span className="min-w-[2rem] tabular-nums text-muted-foreground">{s.label}</span>
+                        <span className="ml-auto tabular-nums text-foreground/80">{s.value}</span>
+                        <span className="w-10 text-right tabular-nums text-muted-foreground">{pct}%</span>
+                      </li>
+                    )
+                  })}
+                  {totalRatings === 0 && <li className="text-muted-foreground">No ratings yet</li>}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+          <div className="px-4 pb-3 text-[11px] text-muted-foreground">
+            {totalRatings ? `${totalRatings} total ratings` : "No ratings yet"}
+          </div>
+        </Card>
         <ChartBarSingle
           title="Events hosted"
           description="Number of events per month (last 6 months)"

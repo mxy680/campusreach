@@ -45,12 +45,12 @@ export function ChartBarMultiple({
   } satisfies ChartConfig
 
   return (
-    <Card>
+    <Card className="flex h-full flex-col">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex items-center justify-start">
         <ChartContainer config={chartConfig} className="h-28">
           <BarChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
             <CartesianGrid vertical={false} />

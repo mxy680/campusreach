@@ -63,8 +63,10 @@ const CATEGORY_OPTIONS = [
 ]
 
 export default function Page() {
+  const [userImage, setUserImage] = React.useState<string>("")
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = React.useState(false)
   const [orgId, setOrgId] = React.useState<string | null>(null)
   const [slug, setSlug] = React.useState<string>("")
   const [logoFile, setLogoFile] = React.useState<File | null>(null)
@@ -90,14 +92,29 @@ export default function Page() {
 
   const logoPreview = React.useMemo(() => {
     if (logoFile) return URL.createObjectURL(logoFile)
-    return data.logoUrl
-  }, [logoFile, data.logoUrl])
+    return userImage
+  }, [logoFile, userImage])
 
   React.useEffect(() => {
     return () => {
       if (logoFile) URL.revokeObjectURL(logoPreview)
     }
   }, [logoFile, logoPreview])
+
+  // Load current user (for fallback avatar image) via NextAuth session
+  React.useEffect(() => {
+    ;(async () => {
+      try {
+        const r = await fetch("/api/auth/session")
+        if (!r.ok) return
+        const j = await r.json()
+        const img = (j?.user?.image as string | undefined) || ""
+        if (img) setUserImage(img)
+      } catch {}
+    })()
+  }, [])
+
+  // No longer prefilling organization.logoUrl from user image; avatar display reads from User.image
 
   function update<K extends keyof OrgProfile>(key: K, value: OrgProfile[K]) {
     setData((prev) => ({ ...prev, [key]: value }))
@@ -261,25 +278,57 @@ export default function Page() {
             {/* Logo */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={logoPreview || undefined} alt="Organization logo" />
-                  <AvatarFallback>LOGO</AvatarFallback>
+                <Avatar className="h-16 w-16 rounded-full overflow-hidden bg-muted">
+                  {logoPreview ? (
+                    <AvatarImage
+                      key={logoPreview}
+                      src={`${logoPreview}`}
+                      alt="Organization logo"
+                      className="h-full w-full object-cover"
+                      loading="eager"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <AvatarFallback>LOGO</AvatarFallback>
+                  )}
                 </Avatar>
                 <div className="grid gap-1">
                   <Label className="text-sm">Logo</Label>
                   <p className="text-xs text-muted-foreground">PNG, JPG. 512x512 recommended.</p>
                 </div>
               </div>
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
                 <Input
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
                     const f = e.currentTarget.files?.[0] || null
                     setLogoFile(f)
+                    if (f) {
+                      // Upload to /api/user/avatar -> Spaces, then reflect returned URL
+                      ;(async () => {
+                        try {
+                          setUploadingAvatar(true)
+                          const fd = new FormData()
+                          fd.append("file", f)
+                          const res = await fetch("/api/user/avatar", { method: "POST", body: fd })
+                          if (!res.ok) throw new Error("Upload failed")
+                          const j = (await res.json()) as { url?: string }
+                          if (j?.url) {
+                            setUserImage(j.url)
+                          }
+                        } catch {
+                          // keep silent here; a toast is already used elsewhere; optional to add one
+                          
+                        } finally {
+                          setUploadingAvatar(false)
+                        }
+                      })()
+                    }
                   }}
                   className={`max-w-xs`}
                 />
+                {uploadingAvatar && <span className="text-xs text-muted-foreground">Uploading…</span>}
               </div>
             </div>
 

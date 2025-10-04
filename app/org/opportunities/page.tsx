@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { IconCalendar, IconPencil, IconMapPin } from "@tabler/icons-react"
 import { IconTrash } from "@tabler/icons-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import Image from "next/image"
 
 function formatFriendly(iso: string): { full: string; relative: string } {
   const d = new Date(iso)
@@ -78,6 +79,10 @@ export default function Page() {
   const [events, setEvents] = React.useState<EventItem[]>([])
   const [loading, setLoading] = React.useState(true)
   const [editingId, setEditingId] = React.useState<string | null>(null)
+  // Show dev-only helpers based on public flags only (build-mode independent)
+  // Set NEXT_PUBLIC_SHOW_AUTOFILL=true or NEXT_PUBLIC_NODE_ENV=dev to enable
+  const publicEnv = (process.env.NEXT_PUBLIC_NODE_ENV || "").toLowerCase()
+  const showDevTools = publicEnv === "dev" || ["1", "true", "yes"].includes(String(process.env.NEXT_PUBLIC_SHOW_AUTOFILL || "").toLowerCase())
 
   // Helper to produce a datetime-local compatible string in local time
   const toLocalInput = React.useCallback((date: Date) => {
@@ -313,23 +318,65 @@ export default function Page() {
               </div>
 
               <div className="space-y-2">
-                <Label>Upload flyer or image</Label>
+                <Label>Upload flyer, image, or document</Label>
                 <Input
                   type="file"
-                  accept="image/*"
+                  accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg,image/webp,image/gif"
                   multiple
                   onChange={(e) => {
                     const list = e.target.files
                     if (!list) return
-                    setFiles(Array.from(list))
+                    const picked = Array.from(list)
+                    setFiles((prev) => {
+                      const map = new Map<string, File>(prev.map((f) => [f.name + f.size, f]))
+                      for (const f of picked) map.set(f.name + f.size, f)
+                      return Array.from(map.values())
+                    })
                   }}
                 />
+                {files.length > 0 && (
+                  <div className="mt-2">
+                    <div className="mb-1 text-xs font-medium text-foreground">Selected attachments</div>
+                    <div className="flex flex-wrap gap-2">
+                      {files.map((f, i) => {
+                        const name = f.name
+                        const lower = name.toLowerCase()
+                        const isImg = [".png", ".jpg", ".jpeg", ".webp", ".gif"].some((ext) => lower.endsWith(ext))
+                        if (isImg) {
+                          const url = URL.createObjectURL(f)
+                          return (
+                            <div key={i} className="relative">
+                              <Image
+                                src={url}
+                                alt={name}
+                                width={80}
+                                height={80}
+                                className="h-20 w-20 rounded border object-cover"
+                                unoptimized
+                                onLoadingComplete={() => URL.revokeObjectURL(url)}
+                              />
+                              <div className="mt-1 max-w-[80px] truncate text-[10px] text-muted-foreground" title={name}>{name}</div>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div key={i} className="inline-flex items-center gap-2 rounded border bg-muted/40 px-2 py-1 text-xs">
+                            <span className="inline-block size-2 rounded-full bg-primary/70" aria-hidden />
+                            <span className="truncate max-w-[200px]" title={name}>{name}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="md:col-span-2 flex items-center justify-end gap-2 pt-1">
-                <Button type="button" variant="outline" onClick={autofillSample} disabled={submitting}>
-                  Autofill sample
-                </Button>
+                {showDevTools && (
+                  <Button type="button" variant="outline" onClick={autofillSample} disabled={submitting}>
+                    Autofill sample
+                  </Button>
+                )}
                 {editingId && (
                   <Button type="button" variant="outline" onClick={resetForm} disabled={submitting}>
                     Cancel

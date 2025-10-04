@@ -3,6 +3,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Rating given by a volunteer to an event (after it is over)
+model EventRating {
+  id          String   @id @default(cuid())
+  eventId     String
+  volunteerId String
+  rating      Int      /// 1-5
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, volunteerId])
+  @@index([eventId])
+  @@index([volunteerId])
+}
+
 /// Many-to-many style link between Organization and User for membership/admin access
 model OrganizationMember {
   id             String @id @default(cuid())
@@ -161,6 +178,7 @@ model Volunteer {
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   signups       EventSignup[]
   timeEntries   TimeEntry[]
+  ratings       EventRating[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -195,6 +213,7 @@ model Event {
   groupChat   GroupChat?
   /// Backref for legacy messages during migration
   messages    ChatMessage[]
+  ratings     EventRating[]
 }
 
 /// A volunteer signing up for an event

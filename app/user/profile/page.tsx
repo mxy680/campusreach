@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 
 type ProfileForm = {
   firstName: string
@@ -26,6 +27,7 @@ type ProfileForm = {
 export default function Page() {
   const { data: session } = useSession()
   const email = session?.user?.email ?? ""
+  const sessionImage = session?.user?.image || null
   const [slug, setSlug] = React.useState<string>("")
   const [form, setForm] = React.useState<ProfileForm>({
     firstName: "",
@@ -41,9 +43,33 @@ export default function Page() {
   })
   const [saving, setSaving] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
+  const [uploadingAvatar, setUploadingAvatar] = React.useState(false)
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(sessionImage as string | null)
 
   const onChange = (key: keyof ProfileForm, value: string | number | boolean | File | null) => {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  async function onPickAvatar(file?: File | null) {
+    if (!file) return
+    try {
+      setUploadingAvatar(true)
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/user/avatar", { method: "POST", body: fd })
+      if (!res.ok) {
+        toast("Failed to upload avatar")
+        return
+      }
+      const json = await res.json()
+      if (json?.url) {
+        setAvatarUrl(json.url as string)
+      }
+    } catch {
+      toast("Failed to upload avatar")
+    } finally {
+      setUploadingAvatar(false)
+    }
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -131,11 +157,13 @@ export default function Page() {
             radiusMiles: p.radiusMiles ?? 5,
             transportNotes: p.transportNotes ?? "",
           }))
+          // Keep avatar preview in sync with session DB value
+          if (sessionImage) setAvatarUrl(sessionImage)
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [email])
+  }, [email, sessionImage])
 
   return (
     <main className="p-4">
@@ -233,16 +261,37 @@ export default function Page() {
               />
             </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="avatar">Avatar</Label>
-              <input
-                id="avatar"
-                type="file"
-                accept="image/*"
-                onChange={(e) => onChange("avatarFile", e.target.files?.[0] ?? null)}
-                disabled
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm opacity-60 cursor-not-allowed file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:text-foreground"
-              />
+            <div className="md:col-span-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-center">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-full border bg-muted">
+                    {avatarUrl ? (
+                      <Image src={avatarUrl} alt="avatar" fill sizes="48px" className="object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">No avatar</div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">Avatar</div>
+                    <div className="text-xs text-muted-foreground truncate">PNG, JPG. 512×512 recommended.</div>
+                    {uploadingAvatar && (<div className="text-[11px] text-muted-foreground">Uploading…</div>)}
+                  </div>
+                </div>
+                <div className="sm:justify-self-end">
+                  <input
+                    id="avatar"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null
+                      onChange("avatarFile", f)
+                      onPickAvatar(f)
+                      e.currentTarget.value = ""
+                    }}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:text-foreground"
+                  />
+                </div>
+              </div>
             </div>
 
             <fieldset className="md:col-span-2">

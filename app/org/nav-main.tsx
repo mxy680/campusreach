@@ -163,6 +163,7 @@ export function NavMain({
                         className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                         type="file"
                         multiple
+                        accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg,image/webp,image/gif"
                         onChange={(e) => {
                           const list = e.target.files
                           if (!list) return

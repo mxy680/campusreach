@@ -164,6 +164,32 @@ export function OpportunityCard({ o }: { o: Opportunity }) {
                     </div>
                   )}
 
+                  {o.attachments && o.attachments.length > 0 && (
+                    <div>
+                      <div className="mb-1 text-xs font-medium text-foreground">Attachments</div>
+                      <div className="flex flex-wrap gap-2">
+                        {o.attachments.map((url, i) => {
+                          const lower = url.toLowerCase()
+                          const isImg = [".png", ".jpg", ".jpeg", ".webp", ".gif"].some((ext) => lower.includes(ext))
+                          return isImg ? (
+                            <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
+                              <img
+                                src={url}
+                                alt={`attachment-${i+1}`}
+                                className="h-20 w-20 object-cover rounded border"
+                                loading="lazy"
+                              />
+                            </a>
+                          ) : (
+                            <a key={i} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline underline-offset-2">
+                              <span>Attachment {i + 1}</span>
+                            </a>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="pt-1 flex justify-end gap-2">
                     <Button size="sm" onClick={onToggleJoin} disabled={joining} variant={joined ? "destructive" : "default"}>
                       {joined ? (joining ? "Leaving…" : "Leave") : (joining ? "Signing…" : "Sign up")}

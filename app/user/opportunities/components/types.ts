@@ -11,6 +11,7 @@ export type Opportunity = {
   location: string
   need: number
   joined: number
+  attachments?: string[]
   attendees?: string[]
   skills: string[]
   hours?: number

@@ -2,6 +2,102 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+export const runtime = "nodejs";
+
+type HttpError = Error & { status?: number }
+function makeHttpError(message: string, status: number): HttpError {
+  const err = new Error(message) as HttpError
+  err.status = status
+  return err
+}
+
+const ALLOWED_MIME_TYPES = new Set<string>([
+  // images
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  // documents
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+])
+const MAX_FILE_BYTES = 50 * 1024 * 1024 // 50 MB per file
+
+async function uploadToSpaces(file: File, keyPrefix: string) {
+  const endpoint = process.env.DO_SPACES_ENDPOINT
+  const region = process.env.DO_SPACES_REGION
+  const bucket = process.env.DO_SPACES_BUCKET
+  const accessKeyId = process.env.DO_SPACES_KEY
+  const secretAccessKey = process.env.DO_SPACES_SECRET
+  if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey) {
+    throw new Error("Spaces not configured")
+  }
+  const endpointUrl = new URL(endpoint)
+  const hostHasBucket = endpointUrl.host.startsWith(`${bucket}.`)
+  const s3 = new S3Client({
+    region,
+    endpoint,
+    // If endpoint already includes the bucket subdomain, use path-style to avoid duplicating bucket in host
+    forcePathStyle: hostHasBucket,
+    credentials: { accessKeyId, secretAccessKey },
+  })
+
+  // Validate type and size (with extension-based fallback when type is missing)
+  const nameLower = file.name.toLowerCase()
+  const ext = nameLower.slice(nameLower.lastIndexOf(".") + 1)
+  const extToMime: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    gif: "image/gif",
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  }
+  const contentType = file.type || extToMime[ext] || "application/octet-stream"
+  const size: number | undefined = typeof (file as File).size === "number" ? (file as File).size : undefined
+  // Debug log to help diagnose client/browser MIME issues
+  console.info("events upload", {
+    name: file.name,
+    contentType,
+    sizeMB: typeof size === "number" ? Number((size / (1024 * 1024)).toFixed(2)) : undefined,
+  })
+  if (!ALLOWED_MIME_TYPES.has(contentType)) {
+    throw makeHttpError(`Unsupported type: ${contentType} (ext: .${ext || ""})`, 415)
+  }
+  if (typeof size === "number" && size > MAX_FILE_BYTES) {
+    throw makeHttpError(`File too large: ${(size / (1024 * 1024)).toFixed(1)} MB (max 50 MB)`, 413)
+  }
+  const buf = Buffer.from(await file.arrayBuffer())
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
+  const ver = Date.now()
+  const key = `${keyPrefix}/${ver}_${safeName}`
+
+  await s3.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: buf,
+    ContentType: contentType,
+    CacheControl: "public, max-age=31536000, immutable",
+    ACL: process.env.DO_SPACES_PUBLIC === "true" ? "public-read" : undefined,
+  }))
+
+  const endpointHost = endpointUrl.host
+  const baseHost = endpointHost.startsWith(`${bucket}.`) ? endpointHost.slice((`${bucket}.`).length) : endpointHost
+  const baseCdn = process.env.NEXT_PUBLIC_SPACES_CDN?.replace(/\/$/, "")
+  const publicBase = baseCdn || `https://${bucket}.${baseHost}`
+  // Keep bucket as first path segment (to match avatar URL convention you requested)
+  const url = `${publicBase}/${bucket}/${key}`
+  return url
+}
 
 export async function POST(req: Request) {
   try {
@@ -48,13 +144,27 @@ export async function POST(req: Request) {
       // ignore, keep default []
     }
 
-    // Files: in this basic implementation we only store file names as placeholders.
-    // You can replace this with an upload to S3/R2 and store the resulting URLs.
+    // Upload any files to Spaces and collect their URLs
     const attachments: string[] = [];
+    const failures: Array<{ name: string; reason: string; status?: number }> = []
     const files = form.getAll("attachments");
     for (const f of files) {
-      // f is a File per standard Request.formData
-      if (typeof f === "object" && "name" in f) attachments.push((f as File).name);
+      if (typeof f === "object" && "name" in f) {
+        try {
+          const url = await uploadToSpaces(f as File, `events/${organizationId ?? "no-org"}`)
+          attachments.push(url)
+        } catch (e: unknown) {
+          const err = e as HttpError
+          const name = (f as File).name
+          const reason = err?.message || "Upload failed"
+          const status = err?.status
+          failures.push({ name, reason, status })
+          console.warn("Failed to upload attachment", name, e)
+        }
+      }
+    }
+    if (failures.length > 0) {
+      return NextResponse.json({ error: "Some files were rejected", failures }, { status: failures[0]?.status || 400 })
     }
 
     // Try to extract a Location: ... line from the shortDescription (client composes this)
@@ -123,6 +233,7 @@ export async function GET() {
       notes: string | null;
       timeCommitmentHours: number | null;
       specialties: string[];
+      attachments: string[];
       _count: { signups: number };
     }
     const events = await prisma.event.findMany({
@@ -142,6 +253,7 @@ export async function GET() {
         notes: e.notes ?? null,
         timeCommitmentHours: e.timeCommitmentHours ?? null,
         specialties: e.specialties ?? [],
+        attachments: e.attachments ?? [],
         signedUpCount: e._count.signups,
         completedCount: undefined,
         hoursLogged: undefined,
@@ -206,8 +318,24 @@ export async function PUT(req: Request) {
     // Gather file names; only replace attachments if any provided
     const files = form.getAll("attachments")
     const newAttachments: string[] = []
+    const failures: Array<{ name: string; reason: string; status?: number }> = []
     for (const f of files) {
-      if (typeof f === "object" && "name" in f) newAttachments.push((f as File).name)
+      if (typeof f === "object" && "name" in f) {
+        try {
+          const url = await uploadToSpaces(f as File, `events/${organizationId ?? "no-org"}`)
+          newAttachments.push(url)
+        } catch (e: unknown) {
+          const err = e as HttpError
+          const name = (f as File).name
+          const reason = err?.message || "Upload failed"
+          const status = err?.status
+          failures.push({ name, reason, status })
+          console.warn("Failed to upload attachment", name, e)
+        }
+      }
+    }
+    if (failures.length > 0) {
+      return NextResponse.json({ error: "Some files were rejected", failures }, { status: failures[0]?.status || 400 })
     }
 
     // Ensure the event belongs to this org (if org exists)
