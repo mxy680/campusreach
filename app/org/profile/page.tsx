@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
 
 type OrgProfile = {
+  name: string
   logoUrl: string
   description: string
   mission: string
@@ -25,6 +26,25 @@ type OrgProfile = {
   facebook?: string
   linkedin?: string
   contacts: Array<{ name: string; email?: string; phone?: string; role?: string }>
+}
+
+type OrgProfileApi = {
+  id: string
+  slug: string | null
+  name: string
+  logoUrl: string | null
+  description: string | null
+  mission: string | null
+  contactName: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  categories: string[] | null
+  website: string | null
+  twitter?: string | null
+  instagram?: string | null
+  facebook?: string | null
+  linkedin?: string | null
+  contacts: Array<{ id: string; name: string; email: string | null; phone: string | null; role: string | null }>
 }
 
 const CATEGORY_OPTIONS = [
@@ -49,6 +69,7 @@ export default function Page() {
   const [slug, setSlug] = React.useState<string>("")
   const [logoFile, setLogoFile] = React.useState<File | null>(null)
   const [data, setData] = React.useState<OrgProfile>(() => ({
+    name: "",
     logoUrl: "",
     description: "",
     mission: "",
@@ -102,23 +123,39 @@ export default function Page() {
         const r2 = await fetch(`/api/org/profile?orgId=${encodeURIComponent(first)}`)
         if (!r2.ok) return
         const j2 = await r2.json()
-        const p: Partial<OrgProfile> = (j2?.data ?? {}) as Partial<OrgProfile>
-        const fetchedSlug = (j2?.data as any)?.slug as string | undefined
+        const org: OrgProfileApi | undefined = j2?.data as OrgProfileApi | undefined
+        const p: Partial<OrgProfile> = {
+          name: org?.name ?? "",
+          logoUrl: org?.logoUrl ?? undefined,
+          description: org?.description ?? undefined,
+          mission: org?.mission ?? undefined,
+          contactName: org?.contactName ?? undefined,
+          contactEmail: org?.contactEmail ?? undefined,
+          contactPhone: org?.contactPhone ?? undefined,
+          categories: org?.categories ?? undefined,
+          website: org?.website ?? undefined,
+          twitter: org?.twitter ?? undefined,
+          instagram: org?.instagram ?? undefined,
+          facebook: org?.facebook ?? undefined,
+          linkedin: org?.linkedin ?? undefined,
+        }
+        const fetchedSlug = org?.slug ?? undefined
         setData({
+          name: p?.name ?? "",
           logoUrl: p?.logoUrl ?? "",
           description: p?.description ?? "",
           mission: p?.mission ?? "",
           contactName: p?.contactName ?? "",
           contactEmail: p?.contactEmail ?? "",
           contactPhone: p?.contactPhone ?? "",
-          categories: Array.isArray(p?.categories) ? p.categories : [],
+          categories: Array.isArray(p?.categories) ? p.categories! : [],
           website: p?.website ?? "",
           twitter: p?.twitter ?? "",
           instagram: p?.instagram ?? "",
           facebook: p?.facebook ?? "",
           linkedin: p?.linkedin ?? "",
-          contacts: Array.isArray((j2?.data as any)?.contacts)
-            ? ((j2?.data as any).contacts as Array<{ name: string; email?: string; phone?: string; role?: string }>).map((c) => ({
+          contacts: Array.isArray(org?.contacts)
+            ? org!.contacts.map((c) => ({
                 name: c.name || "",
                 email: c.email || "",
                 phone: c.phone || "",
@@ -210,6 +247,17 @@ export default function Page() {
             <CardDescription>Logo, description, mission, and categories</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
+            {/* Organization Name */}
+            <div className="space-y-2">
+              <Label htmlFor="org-name">Organization name</Label>
+              <Input
+                id="org-name"
+                value={data.name}
+                onChange={(e) => update("name", e.target.value)}
+                placeholder="Your organization name"
+                maxLength={120}
+              />
+            </div>
             {/* Logo */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">

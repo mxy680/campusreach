@@ -43,7 +43,23 @@ export async function GET(req: NextRequest, context: { params: Promise<{ eventId
     gc = await prisma.groupChat.create({ data: { eventId } })
   }
 
-  const messages = await prisma.chatMessage.findMany({
+  // Preload org info and member userIds for author display
+  const org = event.organizationId
+    ? await prisma.organization.findUnique({ where: { id: event.organizationId }, select: { id: true, name: true, email: true, contactEmail: true } })
+    : null
+  const orgMemberUserIds = event.organizationId
+    ? new Set(
+        (
+          await prisma.organizationMember.findMany({
+            where: { organizationId: event.organizationId },
+            select: { userId: true },
+            take: 10000,
+          })
+        ).map((m) => m.userId)
+      )
+    : new Set<string>()
+
+  const raw = await prisma.chatMessage.findMany({
     where: { groupChatId: gc.id },
     orderBy: { createdAt: "asc" },
     take: limit,
@@ -54,8 +70,23 @@ export async function GET(req: NextRequest, context: { params: Promise<{ eventId
       authorType: true,
       kind: true,
       body: true,
+      userId: true,
       user: { select: { id: true, name: true, image: true, email: true } },
     },
+  })
+
+  const messages = raw.map((m) => {
+    let authorName = m.user?.name || ""
+    if (m.authorType === "SYSTEM") {
+      authorName = "CampusReach"
+    } else if (org) {
+      const isOrgMemberAuthor = m.userId ? orgMemberUserIds.has(m.userId) : false
+      const isOrgEmailAuthor = m.user?.email && (m.user.email === org.email || m.user.email === org.contactEmail)
+      if (isOrgMemberAuthor || isOrgEmailAuthor) {
+        authorName = org.name || authorName
+      }
+    }
+    return { ...m, authorName }
   })
 
   const nextCursor = messages.length === limit ? messages[messages.length - 1].id : null
@@ -118,9 +149,25 @@ export async function POST(req: NextRequest, context: { params: Promise<{ eventI
       createdAt: true,
       kind: true,
       body: true,
+      userId: true,
       user: { select: { id: true, name: true, image: true, email: true } },
     },
   })
 
-  return NextResponse.json({ ok: true, data: msg })
+  // Compute authorName for immediate echo
+  const org = event.organizationId
+    ? await prisma.organization.findUnique({ where: { id: event.organizationId }, select: { id: true, name: true, email: true, contactEmail: true } })
+    : null
+  let authorName = msg.user?.name || ""
+  if (org) {
+    const isOrgMemberAuthor = msg.userId
+      ? !!(await prisma.organizationMember.findFirst({ where: { organizationId: org.id, userId: msg.userId! }, select: { id: true } }))
+      : false
+    const isOrgEmailAuthor = msg.user?.email && (msg.user.email === org.email || msg.user.email === org.contactEmail)
+    if (isOrgMemberAuthor || isOrgEmailAuthor) {
+      authorName = org.name || authorName
+    }
+  }
+
+  return NextResponse.json({ ok: true, data: { ...msg, authorName } })
 }

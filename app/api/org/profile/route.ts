@@ -36,6 +36,7 @@ export async function PUT(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     orgId?: string
     profile?: {
+      name?: string | null
       logoUrl?: string | null
       description?: string | null
       mission?: string | null
@@ -59,6 +60,7 @@ export async function PUT(req: NextRequest) {
     await tx.organization.update({
       where: { id: orgId },
       data: {
+        name: (profile.name ?? undefined)?.toString().trim(),
         logoUrl: profile.logoUrl ?? undefined,
         description: profile.description ?? undefined,
         mission: profile.mission ?? undefined,

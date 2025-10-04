@@ -5,10 +5,11 @@ import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import Image from "next/image"
 import { IconSend } from "@tabler/icons-react"
 
 function useEventChat(eventId: string | undefined) {
-  const [messages, setMessages] = React.useState<Array<{ id: string; createdAt: string; kind: "MESSAGE" | "ANNOUNCEMENT"; body: string; user?: { name?: string | null; image?: string | null }; organization?: { name: string | null } }>>([])
+  const [messages, setMessages] = React.useState<Array<{ id: string; createdAt: string; kind: "MESSAGE" | "ANNOUNCEMENT"; body: string; authorName?: string; user?: { name?: string | null; image?: string | null } }>>([])
   const [cursor, setCursor] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(false)
 
@@ -63,7 +64,7 @@ function useEventChat(eventId: string | undefined) {
 export default function OrgEventChatPage() {
   const params = useParams<{ id: string }>()
   const eventId = params?.id
-  const { messages, loading, fetchMore, resetAndRefetch } = useEventChat(eventId)
+  const { messages, resetAndRefetch } = useEventChat(eventId)
   const [text, setText] = React.useState("")
   // Simple composer (no announcement toggle on this view)
 
@@ -109,12 +110,12 @@ export default function OrgEventChatPage() {
                     </div>
                   )
                 }
-                const author = m.user?.name || "CampusReach"
+                const author = m.authorName || m.user?.name || "CampusReach"
                 const avatar = m.user?.image
                 items.push(
                   <div key={m.id} className="flex items-start gap-3">
                     {avatar ? (
-                      <img src={avatar} alt={author} className="mt-0.5 size-8 rounded-full object-cover" />
+                      <Image src={avatar} alt={author} width={32} height={32} className="mt-0.5 rounded-full object-cover" />
                     ) : (
                       <div className="mt-0.5 flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground/70">
                         {(author || "C").charAt(0).toUpperCase()}
