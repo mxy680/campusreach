@@ -82,9 +82,13 @@ export async function middleware(req: NextRequest) {
     // leave defaults
   }
 
-  // Enforce school email domain for volunteers
+  // Enforce school email domain for volunteers, but do NOT block org-intent routes
+  // Skip restriction when user is navigating org pages or org signup flow
+  const onOrgPaths =
+    pathname.startsWith("/org") || pathname.startsWith(ORG_SIGNUP_PREFIX) || onOrgProfile || onOrgStart || onOrgDashboard;
   if (
     isAuthed &&
+    !onOrgPaths &&
     role === "VOLUNTEER" &&
     typeof token?.email === "string" &&
     !token.email.toLowerCase().endsWith("@case.edu") &&
@@ -110,8 +114,8 @@ export async function middleware(req: NextRequest) {
     if (!profileComplete && onUserDashboard) return redirect(PROFILE_PATH);
     // Always allow volunteer signup flow pages regardless of completion state
   } else if (role === "ORGANIZATION") {
-    // If an organization user is authenticated, skip any signup routes (both org and user)
-    if (pathname.startsWith(ORG_SIGNUP_PREFIX) || pathname.startsWith(USER_SIGNUP_PREFIX)) {
+    // If an organization user is authenticated, skip user signup routes
+    if (pathname.startsWith(USER_SIGNUP_PREFIX)) {
       return redirect(ORG_DASHBOARD_PATH);
     }
     // Orgs should not access user dashboard or profile page
@@ -124,6 +128,8 @@ export async function middleware(req: NextRequest) {
     isAuthed &&
     // allow user signup flow pages (any under /auth/signup/user/*)
     !pathname.startsWith(USER_SIGNUP_PREFIX) &&
+    // also allow org signup flow pages (any under /auth/signup/organization/*)
+    !pathname.startsWith(ORG_SIGNUP_PREFIX) &&
     !onOrgProfile &&
     !onOrgStart &&
     onAuthPages
