@@ -137,6 +137,23 @@ export async function middleware(req: NextRequest) {
     return redirect(role === "ORGANIZATION" ? ORG_DASHBOARD_PATH : USER_DASHBOARD_PATH);
   }
 
+  // Catch-all: if authenticated and visiting top-level or other non-dashboard, non-auth paths,
+  // send them to their respective dashboard. This keeps users anchored in their area.
+  if (
+    isAuthed &&
+    !pathname.startsWith("/auth") &&
+    !pathname.startsWith("/org") &&
+    !pathname.startsWith("/user") &&
+    pathname !== "/" // allow root to be redirected below as well
+  ) {
+    return redirect(role === "ORGANIZATION" ? ORG_DASHBOARD_PATH : USER_DASHBOARD_PATH);
+  }
+
+  // Redirect authenticated users from home page to their dashboard
+  if (isAuthed && pathname === "/") {
+    return redirect(role === "ORGANIZATION" ? ORG_DASHBOARD_PATH : USER_DASHBOARD_PATH);
+  }
+
   return NextResponse.next();
 }
 
