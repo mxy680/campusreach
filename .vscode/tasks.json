@@ -44,7 +44,7 @@
             "label": "Studio",
             "type": "shell",
             "command": "pnpm",
-            "args": ["exec", "prisma", "studio"],
+            "args": ["prisma", "studio"],
             "presentation": { "reveal": "always", "panel": "dedicated" }
         },
         {
