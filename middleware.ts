@@ -95,8 +95,10 @@ export async function middleware(req: NextRequest) {
     if (!profileComplete && onUserDashboard) return redirect(PROFILE_PATH);
     // Always allow volunteer signup flow pages regardless of completion state
   } else if (role === "ORGANIZATION") {
-    // If an organization user is authenticated, skip any organization signup routes
-    if (pathname.startsWith(ORG_SIGNUP_PREFIX)) return redirect(ORG_DASHBOARD_PATH);
+    // If an organization user is authenticated, skip any signup routes (both org and user)
+    if (pathname.startsWith(ORG_SIGNUP_PREFIX) || pathname.startsWith(USER_SIGNUP_PREFIX)) {
+      return redirect(ORG_DASHBOARD_PATH);
+    }
     // Orgs should not access user dashboard or profile page
     if (onUserDashboard || onProfile) return redirect(ORG_DASHBOARD_PATH);
   }
