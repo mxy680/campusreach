@@ -5,6 +5,7 @@ import { getToken } from "next-auth/jwt";
 // Protected route prefixes
 const PROFILE_PATH = "/auth/signup/user/profile";
 const USER_SIGNUP_PREFIX = "/auth/signup/user";
+const ORG_SIGNUP_PREFIX = "/auth/signup/organization";
 const ORG_PROFILE_PATH = "/auth/signup/organization/profile";
 const ORG_START_PATH = "/auth/signup/organization/start";
 const GENERIC_DASHBOARD_PATH = "/dashboard";
@@ -86,12 +87,16 @@ export async function middleware(req: NextRequest) {
 
   // Role-specific routing
   if (role === "VOLUNTEER") {
+    // If a volunteer already completed profile, skip any user signup routes
+    if (profileComplete && pathname.startsWith(USER_SIGNUP_PREFIX)) return redirect(USER_DASHBOARD_PATH);
     // Volunteers should not access org dashboard
     if (onOrgDashboard) return redirect(USER_DASHBOARD_PATH);
     // Volunteers must complete profile before accessing their dashboard
     if (!profileComplete && onUserDashboard) return redirect(PROFILE_PATH);
     // Always allow volunteer signup flow pages regardless of completion state
   } else if (role === "ORGANIZATION") {
+    // If an organization user is authenticated, skip any organization signup routes
+    if (pathname.startsWith(ORG_SIGNUP_PREFIX)) return redirect(ORG_DASHBOARD_PATH);
     // Orgs should not access user dashboard or profile page
     if (onUserDashboard || onProfile) return redirect(ORG_DASHBOARD_PATH);
   }

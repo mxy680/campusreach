@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,24 @@ export default function Page() {
   const router = useRouter();
   const [school, setSchool] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // If the user is already onboarded, skip the signup flow entirely
+  useEffect(() => {
+    let aborted = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/me", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { role: "VOLUNTEER" | "ORGANIZATION" | null; profileComplete: boolean };
+        if (!aborted && data?.profileComplete) {
+          router.replace("/user/dashboard");
+        }
+      } catch {}
+    })();
+    return () => {
+      aborted = true;
+    };
+  }, [router]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
