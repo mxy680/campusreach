@@ -48,18 +48,28 @@ export async function GET(req: NextRequest, context: { params: Promise<{ eventId
     ? await prisma.organization.findUnique({ where: { id: event.organizationId }, select: { id: true, name: true, email: true, contactEmail: true } })
     : null
   const orgMemberUserIds = event.organizationId
-    ? new Set(
-        (
-          await prisma.organizationMember.findMany({
+    ? (() => {
+        return prisma.organizationMember
+          .findMany({
             where: { organizationId: event.organizationId },
             select: { userId: true },
             take: 10000,
           })
-        ).map((m) => m.userId)
-      )
-    : new Set<string>()
+          .then((rows: Array<{ userId: string }>) => new Set(rows.map((m: { userId: string }) => m.userId)))
+      })()
+    : Promise.resolve(new Set<string>())
 
-  const raw = await prisma.chatMessage.findMany({
+  type RawMsg = {
+    id: string
+    createdAt: Date
+    authorType: "SYSTEM" | "USER"
+    kind: string
+    body: string
+    userId: string | null
+    user: { id: string; name: string | null; image: string | null; email: string | null } | null
+  }
+
+  const raw: RawMsg[] = await prisma.chatMessage.findMany({
     where: { groupChatId: gc.id },
     orderBy: { createdAt: "asc" },
     take: limit,
@@ -75,12 +85,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ eventId
     },
   })
 
-  const messages = raw.map((m) => {
+  const memberIdsSet = await orgMemberUserIds
+  const messages = raw.map((m: RawMsg) => {
     let authorName = m.user?.name || ""
     if (m.authorType === "SYSTEM") {
       authorName = "CampusReach"
     } else if (org) {
-      const isOrgMemberAuthor = m.userId ? orgMemberUserIds.has(m.userId) : false
+      const isOrgMemberAuthor = m.userId ? memberIdsSet.has(m.userId) : false
       const isOrgEmailAuthor = m.user?.email && (m.user.email === org.email || m.user.email === org.contactEmail)
       if (isOrgMemberAuthor || isOrgEmailAuthor) {
         authorName = org.name || authorName

@@ -9,29 +9,34 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   // Find organizations the user can manage
-  let orgIds = (
-    await prisma.organizationMember.findMany({
-      where: { userId: session.user.id },
-      select: { organizationId: true },
-    })
-  ).map((m) => m.organizationId)
+  const orgMemberships: Array<{ organizationId: string }> = await prisma.organizationMember.findMany({
+    where: { userId: session.user.id },
+    select: { organizationId: true },
+  })
+  let orgIds = orgMemberships.map((m) => m.organizationId)
 
   // Fallback: derive org by matching user's email to organization.email or contactEmail
   if (orgIds.length === 0) {
     const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
     if (user?.email) {
-      const orgs = await prisma.organization.findMany({
+      const orgs: Array<{ id: string }> = await prisma.organization.findMany({
         where: { OR: [ { email: user.email }, { contactEmail: user.email } ] },
         select: { id: true },
         take: 5,
       })
-      orgIds = orgs.map(o => o.id)
+      orgIds = orgs.map((o: { id: string }) => o.id)
     }
     if (orgIds.length === 0) return NextResponse.json({ data: [] })
   }
 
   // Find recent events for these orgs
-  const events = await prisma.event.findMany({
+  const events: Array<{
+    id: string;
+    title: string;
+    startsAt: Date;
+    endsAt: Date | null;
+    organization: { id: string; name: string | null; slug: string | null; logoUrl: string | null } | null;
+  }> = await prisma.event.findMany({
     where: { organizationId: { in: orgIds } },
     orderBy: { startsAt: "desc" },
     take: 100,
@@ -66,7 +71,7 @@ export async function GET() {
         e.organization?.id
           ? prisma.organizationMember
               .findMany({ where: { organizationId: e.organization.id }, select: { userId: true }, take: 10000 })
-              .then((ms) => new Set(ms.map((m) => m.userId)))
+              .then((ms: Array<{ userId: string }>) => new Set(ms.map((m: { userId: string }) => m.userId)))
           : Promise.resolve(new Set<string>()),
       ])
 

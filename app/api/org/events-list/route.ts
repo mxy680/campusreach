@@ -16,12 +16,12 @@ export async function GET() {
   }
 
   const where = orgId ? { organizationId: orgId } : {}
-  const events = await prisma.event.findMany({
+  const events: Array<{ id: string; title: string }> = await prisma.event.findMany({
     where,
     orderBy: { startsAt: "asc" },
     select: { id: true, title: true },
   })
 
-  const options = events.map((e) => ({ id: e.id, label: e.title }))
+  const options = events.map((e: { id: string; title: string }) => ({ id: e.id, label: e.title }))
   return NextResponse.json({ data: options })
 }

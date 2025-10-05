@@ -37,12 +37,24 @@ export async function GET(req: NextRequest) {
     let filename = "export.csv"
 
     if (type === "signups") {
-      const rows = await prisma.eventSignup.findMany({
+      const rows: Array<{
+        id: string
+        status: string
+        createdAt: Date
+        event: { title: string | null; startsAt: Date | null; endsAt: Date | null } | null
+        volunteer: { user: { email: string | null; name: string | null } | null } | null
+      }> = await prisma.eventSignup.findMany({
         where: { event: { organizationId: org.id } },
         include: { event: { select: { title: true, startsAt: true, endsAt: true } }, volunteer: { select: { user: { select: { email: true, name: true } } } } },
         orderBy: { createdAt: "asc" },
       })
-      const flat = rows.map((r) => ({
+      const flat = rows.map((r: {
+        id: string
+        status: string
+        createdAt: Date
+        event: { title: string | null; startsAt: Date | null; endsAt: Date | null } | null
+        volunteer: { user: { email: string | null; name: string | null } | null } | null
+      }) => ({
         signupId: r.id,
         eventTitle: r.event?.title ?? "",
         startsAt: r.event?.startsAt?.toISOString() ?? "",
@@ -55,12 +67,26 @@ export async function GET(req: NextRequest) {
       csv = toCSV(flat, ["signupId", "eventTitle", "startsAt", "endsAt", "volunteerName", "volunteerEmail", "status", "createdAt"])
       filename = `signups-${org.id}.csv`
     } else if (type === "volunteers") {
-      const rows = await prisma.volunteer.findMany({
+      const rows: Array<{
+        id: string
+        major: string | null
+        school: string | null
+        phone: string | null
+        createdAt: Date
+        user: { email: string | null; name: string | null } | null
+      }> = await prisma.volunteer.findMany({
         where: { signups: { some: { event: { organizationId: org.id } } } },
         include: { user: { select: { email: true, name: true } } },
         orderBy: { createdAt: "asc" },
       })
-      const flat = rows.map((v) => ({
+      const flat = rows.map((v: {
+        id: string
+        major: string | null
+        school: string | null
+        phone: string | null
+        createdAt: Date
+        user: { email: string | null; name: string | null } | null
+      }) => ({
         volunteerId: v.id,
         name: v.user?.name ?? "",
         email: v.user?.email ?? "",
@@ -72,7 +98,14 @@ export async function GET(req: NextRequest) {
       csv = toCSV(flat, ["volunteerId", "name", "email", "major", "school", "phone", "createdAt"])
       filename = `volunteers-${org.id}.csv`
     } else if (type === "messages") {
-      const rows = await prisma.chatMessage.findMany({
+      const rows: Array<{
+        id: string
+        createdAt: Date
+        body: string
+        event: { title: string | null } | null
+        user: { name: string | null; email: string | null } | null
+        groupChat: { id: string } | null
+      }> = await prisma.chatMessage.findMany({
         where: { event: { organizationId: org.id } },
         include: {
           event: { select: { title: true } },
@@ -88,7 +121,13 @@ export async function GET(req: NextRequest) {
         authorEmail: string
         createdAt: string
         body: string
-      }> = rows.map((m) => ({
+      }> = rows.map((m: {
+        id: string
+        createdAt: Date
+        body: string
+        event: { title: string | null } | null
+        user: { name: string | null; email: string | null } | null
+      }) => ({
         messageId: m.id,
         eventTitle: m.event?.title ?? "",
         authorName: m.user?.name ?? "",
