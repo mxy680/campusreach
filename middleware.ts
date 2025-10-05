@@ -9,6 +9,7 @@ const ORG_SIGNUP_PREFIX = "/auth/signup/organization";
 const ORG_PROFILE_PATH = "/auth/signup/organization/profile";
 const ORG_START_PATH = "/auth/signup/organization/start";
 const GENERIC_DASHBOARD_PATH = "/dashboard";
+const RESTRICTED_PATH = "/restricted";
 const USER_DASHBOARD_PATH = "/user/dashboard";
 const ORG_DASHBOARD_PATH = "/org/dashboard";
 
@@ -20,7 +21,8 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/static") ||
-    pathname === "/favicon.ico"
+    pathname === "/favicon.ico" ||
+    pathname.startsWith(RESTRICTED_PATH)
   ) {
     return NextResponse.next();
   }
@@ -76,6 +78,17 @@ export async function middleware(req: NextRequest) {
     }
   } catch {
     // leave defaults
+  }
+
+  // Enforce school email domain for volunteers
+  if (
+    isAuthed &&
+    role === "VOLUNTEER" &&
+    typeof token?.email === "string" &&
+    !token.email.toLowerCase().endsWith("@case.edu") &&
+    pathname !== RESTRICTED_PATH
+  ) {
+    return redirect(RESTRICTED_PATH);
   }
 
   // Generic dashboard should route to role-specific dashboard

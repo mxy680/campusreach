@@ -37,7 +37,7 @@
             "label": "Reset",
             "type": "shell",
             "command": "bash",
-            "args": ["-lc", "docker compose up -d && pnpm exec prisma migrate reset --force"],
+            "args": ["-lc", "pnpm exec prisma migrate reset --force"],
             "presentation": { "reveal": "always", "panel": "dedicated" }
         },
         {
