@@ -22,6 +22,8 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/api") ||
     pathname.startsWith("/static") ||
     pathname === "/favicon.ico" ||
+    pathname.startsWith("/logos") ||
+    /\.(png|jpg|jpeg|gif|svg|webp|ico|txt|xml|json)$/i.test(pathname) ||
     pathname.startsWith(RESTRICTED_PATH)
   ) {
     return NextResponse.next();
