@@ -143,7 +143,20 @@ export default function Page() {
             }
           | null
         if (p) {
-          setSlug((p.slug as string) || "")
+          const existingSlug = (p.slug as string) || ""
+          setSlug(existingSlug)
+          // Ensure a public slug exists so the button works without an extra save
+          if (!existingSlug) {
+            try {
+              const res = await fetch("/api/user/profile/slug", { method: "POST" })
+              if (res.ok) {
+                const j = await res.json()
+                if (j?.slug) setSlug(j.slug as string)
+              }
+            } catch {
+              // ignore
+            }
+          }
           setForm((f) => ({
             ...f,
             firstName: p.firstName ?? "",

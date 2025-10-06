@@ -147,6 +147,8 @@ export async function middleware(req: NextRequest) {
     !pathname.startsWith("/auth") &&
     !pathname.startsWith("/org") &&
     !pathname.startsWith("/user") &&
+    // Allow public volunteer profiles
+    !pathname.startsWith("/v") &&
     pathname !== "/" // allow root to be redirected below as well
   ) {
     return redirect(role === "ORGANIZATION" ? ORG_DASHBOARD_PATH : USER_DASHBOARD_PATH);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 
 // Load volunteer profile by user email
@@ -74,7 +75,7 @@ export async function PUT(req: NextRequest) {
   }
   if (!email || !profile) return NextResponse.json({ error: "Missing email or profile" }, { status: 400 })
 
-  const user = await prisma.user.findUnique({ where: { email }, select: { id: true, volunteer: { select: { id: true } } } })
+  const user = await prisma.user.findUnique({ where: { email }, select: { id: true, volunteer: { select: { id: true, slug: true } } } })
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
   const gradYearNum = profile.gradYear ? Number(profile.gradYear) : undefined
@@ -92,10 +93,17 @@ export async function PUT(req: NextRequest) {
     transportNotes: profile.transportNotes || null,
   }
 
+  // Generate a stable 16-char slug from user id if missing
+  const stableSlug = crypto.createHash("sha256").update(user.id).digest("hex").slice(0, 16)
+
   const result = await prisma.volunteer.upsert({
     where: { userId: user.id },
-    update: data,
-    create: { userId: user.id, ...data },
+    update: {
+      ...data,
+      // only set slug if it's currently null
+      slug: user.volunteer?.slug ? undefined : stableSlug,
+    },
+    create: { userId: user.id, slug: stableSlug, ...data },
     select: { id: true },
   })
 
