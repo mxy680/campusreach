@@ -15,10 +15,16 @@ export async function POST(req: Request) {
   const volunteer = await prisma.volunteer.findUnique({ where: { userId: session.user.id }, select: { id: true } })
   if (!volunteer) return NextResponse.json({ error: "Volunteer profile not found" }, { status: 404 })
 
-  await prisma.volunteer.update({
-    where: { id: volunteer.id },
-    data: { weeklyGoalHours: typeof weeklyHours === "number" ? weeklyHours : null },
-  })
+  await prisma.$transaction([
+    prisma.volunteer.update({
+      where: { id: volunteer.id },
+      data: { weeklyGoalHours: typeof weeklyHours === "number" ? weeklyHours : null },
+    }),
+    prisma.user.update({
+      where: { id: session.user.id },
+      data: { profileComplete: true },
+    }),
+  ])
 
   return NextResponse.json({ ok: true })
 }

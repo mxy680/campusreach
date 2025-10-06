@@ -48,9 +48,18 @@ export default function Page() {
                 <div className="space-y-2">
                   <Label>Transportation mode</Label>
                   <div className="grid gap-2">
-                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="mode" value="PROVIDE_OTHERS" checked={mode === "PROVIDE_OTHERS"} onChange={() => setMode("PROVIDE_OTHERS")} /> Can provide rides for others</label>
-                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="mode" value="SELF_ONLY" checked={mode === "SELF_ONLY"} onChange={() => setMode("SELF_ONLY")} /> Can drive self only</label>
-                    <label className="flex items-center gap-2 text-sm"><input type="radio" name="mode" value="RIDESHARE" checked={mode === "RIDESHARE"} onChange={() => setMode("RIDESHARE")} /> Prefer CampusReach rideshare</label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input required type="radio" name="mode" value="PROVIDE_OTHERS" checked={mode === "PROVIDE_OTHERS"} onChange={() => setMode("PROVIDE_OTHERS")} />
+                      Can provide rides for others
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input required type="radio" name="mode" value="SELF_ONLY" checked={mode === "SELF_ONLY"} onChange={() => setMode("SELF_ONLY")} />
+                      Can drive self only
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input required type="radio" name="mode" value="RIDESHARE" checked={mode === "RIDESHARE"} onChange={() => setMode("RIDESHARE")} />
+                      Prefer CampusReach rideshare
+                    </label>
                   </div>
                 </div>
 
@@ -68,7 +77,7 @@ export default function Page() {
                   <Button asChild variant="outline" type="button">
                     <Link href="/auth/signup/user/profile">Back</Link>
                   </Button>
-                  <Button type="submit" disabled={submitting}>
+                  <Button type="submit" disabled={submitting || !mode}>
                     {submitting ? "Saving..." : "Continue"}
                   </Button>
                 </div>

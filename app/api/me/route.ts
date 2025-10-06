@@ -11,17 +11,8 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true },
+    select: { role: true, profileComplete: true },
   });
 
-  let profileComplete = false;
-  if (user?.role === "VOLUNTEER") {
-    const v = await prisma.volunteer.findUnique({
-      where: { userId: session.user.id },
-      select: { firstName: true, lastName: true },
-    });
-    profileComplete = !!(v?.firstName && v?.lastName);
-  }
-
-  return NextResponse.json({ role: user?.role ?? null, profileComplete }, { status: 200 });
+  return NextResponse.json({ role: user?.role ?? null, profileComplete: !!user?.profileComplete }, { status: 200 });
 }

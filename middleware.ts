@@ -106,8 +106,11 @@ export async function middleware(req: NextRequest) {
 
   // Role-specific routing
   if (role === "VOLUNTEER") {
-    // If a volunteer already completed profile, skip any user signup routes
-    if (profileComplete && pathname.startsWith(USER_SIGNUP_PREFIX)) return redirect(USER_DASHBOARD_PATH);
+    // If a volunteer already completed their profile, redirect away from any user signup route
+    // (profileComplete is set only on the final step now)
+    if (profileComplete && pathname.startsWith(USER_SIGNUP_PREFIX)) {
+      return redirect(USER_DASHBOARD_PATH);
+    }
     // Volunteers should not access org dashboard
     if (onOrgDashboard) return redirect(USER_DASHBOARD_PATH);
     // Volunteers must complete profile before accessing their dashboard

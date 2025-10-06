@@ -47,6 +47,7 @@ model User {
   accounts                Account[]
   volunteer               Volunteer?
   role                    Role                    @default(VOLUNTEER)
+  profileComplete         Boolean                 @default(false)
   hashedPassword          String?
   notifications           NotificationPreference?
   organizationMemberships OrganizationMember[]

@@ -9,11 +9,10 @@ export async function GET() {
     return NextResponse.json({ complete: false }, { status: 200 });
   }
 
-  const v = await prisma.volunteer.findUnique({
-    where: { userId: session.user.id },
-    select: { firstName: true, lastName: true },
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { profileComplete: true },
   });
 
-  const complete = !!(v && v.firstName && v.lastName);
-  return NextResponse.json({ complete }, { status: 200 });
+  return NextResponse.json({ complete: !!user?.profileComplete }, { status: 200 });
 }
