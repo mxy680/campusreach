@@ -426,7 +426,7 @@ export default function Page() {
                   {upcoming.map((ev) => {
                     const { location } = splitDesc(ev.shortDescription)
                     return (
-                      <li key={ev.id} className="grid grid-cols-1 gap-1 md:grid-cols-12 md:items-center md:gap-x-3 p-2.5 rounded-xl border bg-card hover:shadow-sm transition h-20">
+                      <li key={ev.id} className="grid grid-cols-1 gap-y-2 md:grid-cols-12 md:items-center md:gap-x-3 p-2.5 rounded-xl border bg-card hover:shadow-sm transition overflow-hidden">
                         <div className="md:col-span-6 space-y-1.5 min-w-0">
                           <div className="truncate text-[14px] font-semibold leading-4">{ev.title}</div>
                           {location && (
@@ -441,7 +441,7 @@ export default function Page() {
                             <IconCalendar className="size-3" />
                             <span>{formatFriendly(ev.startsAt).full}</span>
                           </div>
-                          <div className="flex items-center gap-3 justify-center w-full max-w-[240px]">
+                          <div className="flex items-center gap-3 justify-center w-full max-w-full sm:max-w-[260px]">
                             {(() => {
                               const pct = Math.min(100, Math.round(((ev.signedUpCount ?? 0) / Math.max(1, ev.volunteersNeeded)) * 100))
                               return (
@@ -453,7 +453,7 @@ export default function Page() {
                             <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{ev.signedUpCount ?? 0}/{ev.volunteersNeeded}</span>
                           </div>
                         </div>
-                        <div className="md:col-span-2 flex justify-end gap-1.5">
+                        <div className="md:col-span-2 flex justify-end gap-1.5 self-end md:self-auto">
                           <Button
                             variant="outline"
                             size="icon"
@@ -524,7 +524,7 @@ export default function Page() {
                   {past.map((ev) => {
                     const { location } = splitDesc(ev.shortDescription)
                     return (
-                      <li key={ev.id} className="grid grid-cols-1 gap-1 md:grid-cols-12 md:items-center md:gap-x-3 p-2.5 rounded-xl border bg-card hover:shadow-sm transition h-20">
+                      <li key={ev.id} className="grid grid-cols-1 gap-y-2 md:grid-cols-12 md:items-center md:gap-x-3 p-2.5 rounded-xl border bg-card hover:shadow-sm transition overflow-hidden">
                         <div className="md:col-span-6 space-y-1.5 min-w-0">
                           <div className="truncate text-[14px] font-semibold leading-4">{ev.title}</div>
                           {location && (
@@ -539,7 +539,7 @@ export default function Page() {
                             <IconCalendar className="size-3" />
                             <span>{formatFriendly(ev.startsAt).full}</span>
                           </div>
-                          <div className="flex items-center gap-3 justify-center w-full max-w-[240px]">
+                          <div className="flex items-center gap-3 justify-center w-full max-w-full sm:max-w-[260px]">
                             {(() => {
                               const pct = Math.min(100, Math.round(((ev.signedUpCount ?? 0) / Math.max(1, ev.volunteersNeeded)) * 100))
                               return (
@@ -551,7 +551,7 @@ export default function Page() {
                             <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{ev.signedUpCount ?? 0}/{ev.volunteersNeeded}</span>
                           </div>
                         </div>
-                        <div className="md:col-span-2 flex justify-end gap-1.5">
+                        <div className="md:col-span-2 flex justify-end gap-1.5 self-end md:self-auto">
                           <Button
                             variant="outline"
                             size="icon"

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
@@ -89,6 +90,11 @@ export default function OrgEventChatPage() {
 
   return (
     <main className="flex h-[calc(100dvh-60px)] flex-col p-4 md:p-6">
+      <div className="mb-3 flex items-center justify-between">
+        <Button asChild variant="outline" size="sm">
+          <Link href="/org/messaging">View all group chats</Link>
+        </Button>
+      </div>
       <Card className="flex min-h-0 flex-1 flex-col">
         <CardContent className="flex min-h-0 flex-1 flex-col p-0">
           <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6 space-y-3">

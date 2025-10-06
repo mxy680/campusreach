@@ -231,12 +231,12 @@ export default function Page() {
   return (
     <main className="p-4 space-y-4">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Organization profile</h1>
           <p className="text-sm text-muted-foreground">Add details and links to help students recognize your org.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
           {loading ? (
             <div className="text-xs text-muted-foreground">Loading…</div>
           ) : (
@@ -276,7 +276,7 @@ export default function Page() {
               />
             </div>
             {/* Logo */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-16 w-16 rounded-full overflow-hidden bg-muted">
                   {logoPreview ? (
@@ -297,7 +297,7 @@ export default function Page() {
                   <p className="text-xs text-muted-foreground">PNG, JPG. 512x512 recommended.</p>
                 </div>
               </div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="sm:ml-auto flex items-center gap-2 w-full sm:w-auto">
                 <Input
                   type="file"
                   accept="image/*"
@@ -326,7 +326,7 @@ export default function Page() {
                       })()
                     }
                   }}
-                  className={`max-w-xs`}
+                  className={`w-full sm:max-w-xs`}
                 />
                 {uploadingAvatar && <span className="text-xs text-muted-foreground">Uploading…</span>}
               </div>

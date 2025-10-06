@@ -6,15 +6,41 @@ import { IconBell } from "@tabler/icons-react"
 import { Pie, PieChart } from "recharts"
 import { ChartContainer, type ChartConfig, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { ChartBarMultiple, type PlatformBarDatum } from "../components/chart-bar-multiple"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChartBarSingle } from "../components/chart-bar-single"
 
 export default function Page() {
   const announcements = [
-    { id: "a1", title: "Welcome to CampusReach Org Portal", body: "Track sign-ups, manage events, and message students from one place.", date: "2025-09-15" },
-    { id: "a2", title: "New: Opportunities Page", body: "Create and manage opportunities with images, skills, and progress tracking.", date: "2025-09-20" },
-    { id: "a3", title: "Reminder: Verify your profile", body: "Add a logo and contact info so students recognize your org.", date: "2025-09-25" },
-    { id: "a4", title: "Tip: Use Messaging", body: "Reach out to interested students directly from the Messaging tab.", date: "2025-09-26" },
-    { id: "a5", title: "Export Reports", body: "Download monthly summaries of sign-ups and hours from the dashboard.", date: "2025-09-27" },
+    {
+      id: "a1",
+      title: "New: Opportunities builder",
+      body: "Create rich opportunities with images, required skills, and application questions. Drafts are auto‑saved.",
+      date: "2025-09-28",
+    },
+    {
+      id: "a2",
+      title: "Volunteer messaging launched",
+      body: "Start 1:1 chats with interested volunteers from Opportunities and the Volunteers tab.",
+      date: "2025-10-01",
+    },
+    {
+      id: "a3",
+      title: "Ratings dashboard",
+      body: "View event ratings distribution and comments to improve your next events.",
+      date: "2025-10-02",
+    },
+    {
+      id: "a4",
+      title: "CSV export",
+      body: "Download monthly reports of sign‑ups and logged hours from the dashboard.",
+      date: "2025-10-03",
+    },
+    {
+      id: "a5",
+      title: "Maintenance window",
+      body: "CampusReach will undergo scheduled maintenance on Oct 12, 1:00–1:30 AM ET. No downtime expected.",
+      date: "2025-10-05",
+    },
   ]
 
   // Active organization id
@@ -80,6 +106,9 @@ export default function Page() {
     { key: "four", label: "4★", value: ratingCounts[3], fill: "var(--chart-4)" },
     { key: "five", label: "5★", value: ratingCounts[4], fill: "var(--chart-5)" },
   ]
+  const pieData = totalRatings === 0
+    ? [{ key: "none", label: "No ratings", value: 1, fill: "hsl(30 85% 48%)" }]
+    : ratingData
   const eventsFooter = React.useMemo(() => {
     const now = new Date()
     const start = new Date(now)
@@ -141,9 +170,11 @@ export default function Page() {
             <div className="flex items-center justify-between gap-4">
               <ChartContainer config={ratingChartConfig} className="h-[120px] w-[120px]">
                 <PieChart>
-                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                  {totalRatings > 0 && (
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                  )}
                   <Pie
-                    data={ratingData}
+                    data={pieData}
                     dataKey="value"
                     nameKey="label"
                     stroke="0"
@@ -228,16 +259,29 @@ export default function Page() {
           </div>
           <ul className="divide-y">
             {announcements.map((a) => (
-              <li key={a.id} className="flex items-start justify-between gap-4 p-3 hover:bg-muted/40">
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{a.title}</div>
-                  <p className="line-clamp-2 text-sm text-muted-foreground">{a.body}</p>
-                </div>
-                <div className="shrink-0">
-                  <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                    {new Date(a.date).toLocaleDateString()}
-                  </span>
-                </div>
+              <li key={a.id} className="p-0">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full flex items-start justify-between gap-4 p-3 hover:bg-muted/40 text-left">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{a.title}</div>
+                        <p className="line-clamp-2 text-sm text-muted-foreground">{a.body}</p>
+                      </div>
+                      <div className="shrink-0">
+                        <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {new Date(a.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">{a.title}</div>
+                      <div className="text-[11px] text-muted-foreground">{new Date(a.date).toLocaleString()}</div>
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">{a.body}</p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </li>
             ))}
           </ul>

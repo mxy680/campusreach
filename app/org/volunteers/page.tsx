@@ -5,8 +5,10 @@ import { DataTable, schema } from "../components/data-table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export default function Page() {
+  const isMobile = useIsMobile()
   const [eventId, setEventId] = React.useState<string | null>(null)
   const [eventOptions, setEventOptions] = React.useState<{ id: string; label: string }[]>([])
   const [rows, setRows] = React.useState<Array<import("zod").z.infer<typeof schema>>>([])
@@ -80,6 +82,22 @@ export default function Page() {
               </div>
             ))}
           </div>
+        </div>
+      </main>
+    )
+  }
+  // On phones, hide the data table and suggest using a computer
+  if (isMobile) {
+    return (
+      <main className="p-6">
+        <div className="rounded-lg border p-8 text-center">
+          <h1 className="mb-2 text-base font-semibold">Volunteer management</h1>
+          <p className="mx-auto mb-4 max-w-md text-sm text-muted-foreground">
+            Managing volunteers works best on a larger screen. Please visit this page from a laptop or desktop computer.
+          </p>
+          <Button asChild>
+            <Link href="/org/dashboard">Back to dashboard</Link>
+          </Button>
         </div>
       </main>
     )
