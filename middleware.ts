@@ -121,6 +121,10 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith(USER_SIGNUP_PREFIX)) {
       return redirect(ORG_DASHBOARD_PATH);
     }
+    // If org profile is already complete, redirect away from any org signup routes to dashboard
+    if (profileComplete && pathname.startsWith(ORG_SIGNUP_PREFIX)) {
+      return redirect(ORG_DASHBOARD_PATH);
+    }
     // Orgs should not access user dashboard or profile page
     if (onUserDashboard || onProfile) return redirect(ORG_DASHBOARD_PATH);
   }
