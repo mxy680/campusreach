@@ -77,8 +77,7 @@ export async function POST(req: Request) {
               CacheControl: "public, max-age=31536000, immutable",
               ACL: process.env.DO_SPACES_PUBLIC === "true" ? "public-read" : undefined,
             })
-          )
-
+          );
           const endpointHost = new URL(process.env.DO_SPACES_ENDPOINT!).host
           const baseCdn = process.env.NEXT_PUBLIC_SPACES_CDN?.replace(/\/$/, "")
           uploadedLogoUrl = baseCdn
@@ -95,12 +94,17 @@ export async function POST(req: Request) {
     await prisma.organization.create({
       data: {
         name,
-        industry: field,
         email: session.user.email ?? null,
         website: website || null,
         slug,
         logoUrl: uploadedLogoUrl,
       },
+    });
+
+    // Mark the user's profile as complete for ORGANIZATION accounts
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { profileComplete: true },
     });
 
     return NextResponse.json({ ok: true });
