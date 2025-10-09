@@ -25,21 +25,26 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Allow Google sign-in for any domain
-      // Also, if signing in with Google and user has no image yet, save Google's avatar as default
-      try {
-        if (account?.provider === "google") {
-          const picture = (profile as { picture?: string } | null | undefined)?.picture
-          if (user?.id && picture) {
-            const existing = await prisma.user.findUnique({ where: { id: user.id }, select: { image: true } })
-            if (existing && !existing.image) {
-              await prisma.user.update({ where: { id: user.id }, data: { image: picture } })
+      // For OAuth, prevent auto-creating accounts for unknown emails.
+      // Send them to signup with an error instead of proceeding to restricted pages.
+      if (account?.provider === "google") {
+        const email = (user?.email || (profile as { email?: string } | null | undefined)?.email || "").toLowerCase()
+        if (email) {
+          const existing = await prisma.user.findUnique({ where: { email } })
+          if (!existing) {
+            // Abort sign-in and redirect to signup with error message
+            return "/auth/signup/organization?error=no_account"
+          }
+          // Best-effort: sync Google avatar for existing users lacking image
+          try {
+            const picture = (profile as { picture?: string } | null | undefined)?.picture
+            if (!existing.image && picture) {
+              await prisma.user.update({ where: { id: existing.id }, data: { image: picture } })
             }
+          } catch (e) {
+            console.warn("signIn avatar sync failed", e)
           }
         }
-      } catch (e) {
-        // Non-blocking: even if this fails, we still allow the sign-in
-        console.warn("signIn avatar sync failed", e)
       }
       return true;
     },
