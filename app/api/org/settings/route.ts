@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 // Load current organization's settings (name, contactEmail)
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
@@ -36,12 +36,6 @@ export async function GET(req: NextRequest) {
   }
   if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
 
-  const envBase = process.env.NEXTAUTH_URL?.trim()
-  const reqOrigin = (() => {
-    try { return new URL(req.url).origin } catch { return null }
-  })()
-  const baseUrl = envBase || reqOrigin || null
-
   return NextResponse.json({
     id: org.id,
     name: org.name ?? "",
@@ -52,12 +46,11 @@ export async function GET(req: NextRequest) {
     defaultEventLocationTemplate: org.defaultEventLocationTemplate ?? null,
     defaultVolunteersNeeded: org.defaultVolunteersNeeded ?? null,
     userEmail: userEmail,
-    baseUrl,
   })
 }
 
 // Update current organization's settings
-export async function PUT(req: NextRequest) {
+export async function PUT(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

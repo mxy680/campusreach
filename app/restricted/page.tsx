@@ -1,9 +1,12 @@
 "use client";
+import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function RestrictedPage() {
+  const [loading, setLoading] = useState(false);
   return (
     <main className="min-h-[calc(100vh-4rem)] px-4 py-10 md:py-16 bg-[radial-gradient(ellipse_at_top,theme(colors.primary/15),transparent_60%)] flex items-center justify-center">
       <div className="w-full max-w-2xl">
@@ -28,7 +31,23 @@ export default function RestrictedPage() {
               </p>
 
               <div className="flex justify-center">
-                <Button variant="default" onClick={() => signOut({ callbackUrl: "/auth/signin/user" })}>Sign out</Button>
+                <Button
+                  variant="default"
+                  disabled={loading}
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      await fetch("/api/restricted/signout", { method: "POST" });
+                    } catch {
+                      toast.error("Could not complete sign out. Please try again.");
+                    } finally {
+                      await signOut({ callbackUrl: "/auth/signin" });
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  {loading ? "Signing out…" : "Sign out"}
+                </Button>
               </div>
 
               {/* Footer removed per request: org users must sign out first */}

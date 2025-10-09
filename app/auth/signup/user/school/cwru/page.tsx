@@ -8,14 +8,9 @@ export default function Page() {
   return (
     <main className="min-h-[calc(100vh-4rem)] p-6 bg-gradient-to-b from-primary/20 via-transparent to-transparent">
       <header className="mb-6 flex justify-end gap-2">
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/auth/signup/user">Sign up</Link>
-          </Button>
-          <Button asChild variant="default">
-            <Link href="/auth/signin/user">Sign in</Link>
-          </Button>
-        </div>
+        <Button asChild variant="default">
+          <Link href="/auth/signin">Sign in</Link>
+        </Button>
       </header>
 
       <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center">
@@ -30,7 +25,12 @@ export default function Page() {
             <CardContent>
               <Button
                 className="w-full"
-                onClick={() => signIn("google", { callbackUrl: "/auth/signup/user/profile" })}
+                onClick={() => {
+                  try {
+                    document.cookie = "signup_user=1; Max-Age=600; Path=/; SameSite=Lax";
+                  } catch {}
+                  signIn("google", { callbackUrl: "/auth/signup/user/profile" });
+                }}
               >
                 Continue with Single Sign-On
               </Button>

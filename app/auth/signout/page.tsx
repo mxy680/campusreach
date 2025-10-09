@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import UserSignupClient from "./user-client";
+import SignOutClient from "./signout-client";
 
-export default function Page() {
+export default function SignOutPage() {
   return (
     <Suspense fallback={<main className="min-h-[calc(100vh-4rem)] p-6" /> }>
-      <UserSignupClient />
+      <SignOutClient />
     </Suspense>
   );
 }

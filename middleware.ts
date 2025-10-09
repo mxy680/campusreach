@@ -7,7 +7,6 @@ const PROFILE_PATH = "/auth/signup/user/profile";
 const USER_SIGNUP_PREFIX = "/auth/signup/user";
 const ORG_SIGNUP_PREFIX = "/auth/signup/organization";
 const ORG_PROFILE_PATH = "/auth/signup/organization/profile";
-const ORG_LINK_PATH = "/auth/link-org";
 const ORG_START_PATH = "/auth/signup/organization/start";
 const GENERIC_DASHBOARD_PATH = "/dashboard";
 const RESTRICTED_PATH = "/restricted";
@@ -55,7 +54,6 @@ export async function middleware(req: NextRequest) {
   // Determine key route flags (for authenticated flows below)
   const onProfile = pathname.startsWith(PROFILE_PATH);
   const onOrgProfile = pathname.startsWith(ORG_PROFILE_PATH);
-  const onOrgLink = pathname.startsWith(ORG_LINK_PATH);
   const onOrgStart = pathname.startsWith(ORG_START_PATH);
   const onGenericDashboard = pathname.startsWith(GENERIC_DASHBOARD_PATH);
   const onUserDashboard = pathname.startsWith(USER_DASHBOARD_PATH);
@@ -84,14 +82,22 @@ export async function middleware(req: NextRequest) {
     // leave defaults
   }
 
+  // If we have an auth token but the backing user no longer exists (role === null),
+  // sign the user out to clear their session and send them to user sign-in.
+  if (isAuthed && role === null) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/auth/signout";
+    url.search = `callbackUrl=${encodeURIComponent("/auth/signin")}`;
+    return NextResponse.redirect(url);
+  }
+
   // Enforce school email domain for volunteers, but do NOT block org-intent routes
   // Skip restriction when user is navigating org pages or org signup flow
   const onOrgPaths =
-    pathname.startsWith("/org") || pathname.startsWith(ORG_SIGNUP_PREFIX) || onOrgProfile || onOrgStart || onOrgDashboard || onOrgLink;
+    pathname.startsWith("/org") || pathname.startsWith(ORG_SIGNUP_PREFIX) || onOrgProfile || onOrgStart || onOrgDashboard;
   if (
     isAuthed &&
     !onOrgPaths &&
-    !onAuthPages &&
     role === "VOLUNTEER" &&
     typeof token?.email === "string" &&
     !token.email.toLowerCase().endsWith("@case.edu") &&
@@ -142,8 +148,6 @@ export async function middleware(req: NextRequest) {
     !pathname.startsWith(ORG_SIGNUP_PREFIX) &&
     !onOrgProfile &&
     !onOrgStart &&
-    // allow org invite link page to process linking
-    !onOrgLink &&
     onAuthPages
   ) {
     return redirect(role === "ORGANIZATION" ? ORG_DASHBOARD_PATH : USER_DASHBOARD_PATH);

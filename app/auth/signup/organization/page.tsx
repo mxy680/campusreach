@@ -1,81 +1,10 @@
-"use client";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { signIn } from "next-auth/react";
-
-function ErrorBanner() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get("error");
-  if (!error) return null;
-
-  let message = "There was a problem. Please try again.";
-  if (error === "no_account") {
-    message = "No account found for this email. Please sign up to continue.";
-  } else if (error === "account_exists") {
-    message = "An account with this email already exists. Please sign in instead.";
-  }
-
-  return (
-    <div className="text-sm text-destructive border border-destructive/40 bg-destructive/5 rounded-md p-3 mb-4 text-center">
-      {message}
-    </div>
-  );
-}
+import OrgSignupClient from "./org-client";
 
 export default function Page() {
   return (
-    <main className="min-h-[calc(100vh-4rem)] p-6 bg-gradient-to-b from-primary/20 via-transparent to-transparent">
-      <header className="mb-6 flex justify-end gap-2">
-        <Button asChild variant="outline">
-          <Link href="/auth/signup/organization">Sign up</Link>
-        </Button>
-        <Button asChild variant="default">
-          <Link href="/auth/signin/user">Sign in</Link>
-        </Button>
-      </header>
-
-      <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center">
-        <div className="w-full max-w-sm">
-          <Card>
-            <CardHeader className="text-center space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight">Create an organization</h1>
-              <p className="text-sm text-muted-foreground">Use your organization email to continue</p>
-            </CardHeader>
-            <CardContent>
-              <Suspense fallback={null}>
-                <ErrorBanner />
-              </Suspense>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white hover:text-white focus:text-white active:text-white border-transparent"
-                onClick={() => {
-                  try {
-                    // Allow unknown emails during signup flow only
-                    document.cookie = "signup_intent=1; Max-Age=600; Path=/; SameSite=Lax"
-                  } catch {}
-                  return signIn("google", { callbackUrl: "/auth/signup/organization/start" })
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true" className="text-white">
-                  <path fill="currentColor" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12 s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C33.691,6.053,29.082,4,24,4C12.955,4,4,12.955,4,24 s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
-                  <path fill="currentColor" d="M6.306,14.691l6.571,4.819C14.655,16.108,18.961,13,24,13c3.059,0,5.842,1.154,7.961,3.039 l5.657-5.657C33.691,6.053,29.082,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
-                  <path fill="currentColor" d="M24,44c5.166,0,9.799-1.977,13.285-5.193l-6.147-5.201C29.101,35.091,26.66,36,24,36 c-5.202,0-9.619-3.317-11.283-7.946l-6.53,5.027C9.505,39.556,16.227,44,24,44z"/>
-                  <path fill="currentColor" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-3.918,5.606 c0.001-0.001,0.002-0.001,0.003-0.002l6.147,5.201C36.971,39.121,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
-                </svg>
-                Continue with Google
-              </Button>
-              <p className="mt-4 text-xs text-muted-foreground text-center">
-                Volunteer?{" "}
-                <Link href="/auth/signup/user" className="text-primary underline underline-offset-4">Create account</Link>
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </main>
+    <Suspense fallback={<main className="min-h-[calc(100vh-4rem)] p-6" /> }>
+      <OrgSignupClient />
+    </Suspense>
   );
 }

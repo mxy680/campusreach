@@ -40,20 +40,22 @@ generator client {
 }
 
 model User {
-  id                      String                  @id @default(cuid())
+  id                      String                    @id @default(cuid())
   name                    String?
-  email                   String                  @unique
+  email                   String                    @unique
   emailVerified           DateTime?
   image                   String?
   accounts                Account[]
   volunteer               Volunteer?
-  role                    Role                    @default(VOLUNTEER)
-  profileComplete         Boolean                 @default(false)
+  role                    Role                      @default(VOLUNTEER)
+  profileComplete         Boolean                   @default(false)
   hashedPassword          String?
   notifications           NotificationPreference?
   organizationMemberships OrganizationMember[]
   /// Backref: messages authored by this user in event chats
   chatMessages            ChatMessage[]
+  /// Backref: join requests created by this user
+  joinRequests            OrganizationJoinRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -136,8 +138,14 @@ model Organization {
   /// Members (users) that can manage this organization
   members   OrganizationMember[]
 
+  /// Pending/approved/declined join requests
+  joinRequests OrganizationJoinRequest[]
+
   /// Additional contacts
   contacts OrganizationContact[]
+
+  /// Signup intents that target this organization
+  signupIntents SignupIntent[]
 }
 
 model OrganizationContact {
@@ -239,6 +247,20 @@ enum SignupStatus {
   CANCELLED
 }
 
+/// Status of a join request to an organization
+enum JoinStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+/// Signup intent kinds used to drive OAuth flow
+enum SignupIntentKind {
+  ORG_CREATE
+  ORG_JOIN
+  USER_SIGNUP
+}
+
 /// Message types within an event group chat
 enum ChatMessageKind {
   MESSAGE /// regular user/org message
@@ -278,6 +300,41 @@ model ChatMessage {
 
   @@index([groupChatId, createdAt])
   @@index([eventId, createdAt])
+}
+
+/// A user's request to join an existing organization
+model OrganizationJoinRequest {
+  id             String     @id @default(cuid())
+  organizationId String
+  userId         String
+  status         JoinStatus @default(PENDING)
+  message        String?
+  createdAt      DateTime   @default(now())
+  decidedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, status])
+  @@index([organizationId, status, createdAt])
+}
+
+/// Short-lived state to persist signup intent across OAuth redirects
+model SignupIntent {
+  id             String            @id @default(cuid())
+  token          String            @unique
+  kind           SignupIntentKind
+  organizationId String?
+  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?           // existing user initiating the flow (optional)
+  email          String?           // prefilled or expected email (optional)
+  metadata       Json?             // extra context if needed
+  createdAt      DateTime          @default(now())
+  expiresAt      DateTime
+  usedAt         DateTime?
+
+  @@index([organizationId, kind])
+  @@index([email, kind])
 }
 
 // Removed Resource model and ResourceKind enum as unused

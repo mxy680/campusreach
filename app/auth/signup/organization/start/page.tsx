@@ -14,10 +14,17 @@ export default async function Page() {
     include: { volunteer: true },
   });
 
-  // If the user already has a volunteer profile, this email is in use for a volunteer account.
+  // If this email already belongs to a volunteer account, do NOT create/convert to an organization
   if (me?.volunteer) {
-    redirect("/auth/signup/organization?error=EmailInUse");
+    // Send them to the app; middleware will route volunteers appropriately
+    redirect("/");
   }
+
+  // Otherwise, proceed with org onboarding. First, cancel any pending join requests.
+  await prisma.organizationJoinRequest.updateMany({
+    where: { userId: session.user.id, status: "PENDING" },
+    data: { status: "DECLINED" },
+  });
 
   // Ensure role is set to ORGANIZATION for org onboarding.
   if (me?.role !== "ORGANIZATION") {

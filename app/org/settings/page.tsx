@@ -17,7 +17,8 @@ export default function Page() {
   const [orgEmail, setOrgEmail] = React.useState<string>("")
   const [userEmail, setUserEmail] = React.useState<string>("")
   const [members, setMembers] = React.useState<Array<{ id: string; user: { id: string; name: string | null; email: string; image: string | null } }>>([])
-  const [baseUrl, setBaseUrl] = React.useState<string>("")
+  const [pending, setPending] = React.useState<Array<{ id: string; message: string | null; createdAt: string; user: { id: string; name: string | null; email: string; image: string | null } }>>([])
+  // invite links removed; no baseUrl needed
 
   // Browser-detected defaults
   const browserTz = React.useMemo(() => {
@@ -71,7 +72,7 @@ export default function Page() {
         if (json?.id) setOrgId(json.id as string)
         setOrgEmail((json?.email as string) || "")
         setUserEmail((json?.userEmail as string) || "")
-        setBaseUrl((json?.baseUrl as string) || "")
+        // baseUrl no longer used
         setTimezone((prev) => (json?.timezone as string) || prev)
         setLocale((prev) => (json?.locale as string) || prev)
         setDefaultLocation((prev) => (json?.defaultEventLocationTemplate as string) || prev)
@@ -95,14 +96,20 @@ export default function Page() {
     })()
   }, [orgId])
 
-  // Invite URL helper
-  const inviteUrl = React.useMemo(() => {
-    if (!orgId) return ""
-    const base = (baseUrl || "").replace(/\/$/, "")
-    if (!base) return ""
-    return `${base}/auth/link-org?orgId=${encodeURIComponent(orgId)}`
-  }, [orgId, baseUrl])
-  const [copied, setCopied] = React.useState(false)
+  // Load pending join requests (owner-only UI will show this block)
+  React.useEffect(() => {
+    if (!orgId) return
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/org/join-requests?organizationId=${encodeURIComponent(orgId)}`, { cache: "no-store" })
+        if (!r.ok) return
+        const j = await r.json()
+        setPending(Array.isArray(j?.data) ? j.data : [])
+      } catch { }
+    })()
+  }, [orgId])
+
+  // Invite link deprecated
 
   return (
     <main className="p-4 space-y-6">
@@ -192,33 +199,9 @@ export default function Page() {
       {orgEmail && userEmail && orgEmail === userEmail && (
       <Card>
         <CardContent className="pt-6">
-          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-            <div>
-              <h2 className="text-base font-semibold">Team members</h2>
-              <p className="text-sm text-muted-foreground">Allow coworkers to manage this organization.</p>
-            </div>
-            <div className="w-full md:w-auto md:min-w-[640px]">
-              <Label className="mb-1 block text-xs text-muted-foreground">Invite link</Label>
-              <div className="flex items-center gap-2">
-                <Input value={inviteUrl} readOnly placeholder="Invite link appears here" className="flex-1" />
-                <Button
-                  type="button"
-                  className="bg-orange-500 text-white hover:bg-orange-600"
-                  disabled={!inviteUrl}
-                  onClick={async () => {
-                    if (!inviteUrl) return
-                    try {
-                      await navigator.clipboard.writeText(inviteUrl)
-                      setCopied(true)
-                      setTimeout(() => setCopied(false), 1500)
-                    } catch {}
-                  }}
-                >
-                  {copied ? "Copied" : "Copy"}
-                </Button>
-              </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">Share this link with a coworker. They’ll sign in with Google and be added to your org.</p>
-            </div>
+          <div className="mb-4">
+            <h2 className="text-base font-semibold">Team members</h2>
+            <p className="text-sm text-muted-foreground">Manage who has access to this organization.</p>
           </div>
           <div className="space-y-2">
             {members.length === 0 ? (
@@ -275,6 +258,83 @@ export default function Page() {
                     </div>
                   </li>
                 ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Pending join requests */}
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold mb-2">Pending join requests</h3>
+            {pending.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No pending requests.</div>
+            ) : (
+              <ul className="divide-y">
+                {pending.map((req) => (
+                  <li key={req.id} className="flex items-center gap-3 py-2">
+                    {req.user.image ? (
+                      <Image src={req.user.image} alt={req.user.name ?? req.user.email} width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[10px] text-foreground/70">
+                        {(req.user.name ?? req.user.email ?? '').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate">{req.user.name ?? req.user.email}</div>
+                      <div className="text-xs text-muted-foreground truncate">{req.user.email}</div>
+                      {req.message && <div className="text-xs text-muted-foreground mt-1">“{req.message}”</div>}
+                    </div>
+                    <div className="shrink-0 flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-green-600 text-white hover:bg-green-700"
+                        onClick={async () => {
+                          try {
+                            const r = await fetch(`/api/org/join-requests/${req.id}/decision`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ decision: 'APPROVE' }),
+                            })
+                            if (!r.ok) return alert('Failed to approve')
+                            // refresh pending and members
+                            if (orgId) {
+                              const [rp, rm] = await Promise.all([
+                                fetch(`/api/org/join-requests?organizationId=${encodeURIComponent(orgId)}`, { cache: 'no-store' }),
+                                fetch(`/api/org/members?orgId=${encodeURIComponent(orgId)}`, { cache: 'no-store' }),
+                              ])
+                              if (rp.ok) { const j = await rp.json(); setPending(Array.isArray(j?.data) ? j.data : []) }
+                              if (rm.ok) { const j2 = await rm.json(); setMembers(Array.isArray(j2?.data) ? j2.data : []) }
+                            }
+                          } catch { alert('Failed to approve') }
+                        }}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={async () => {
+                          try {
+                            const r = await fetch(`/api/org/join-requests/${req.id}/decision`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ decision: 'DECLINE' }),
+                            })
+                            if (!r.ok) return alert('Failed to decline')
+                            // refresh pending
+                            if (orgId) {
+                              const rp = await fetch(`/api/org/join-requests?organizationId=${encodeURIComponent(orgId)}`, { cache: 'no-store' })
+                              if (rp.ok) { const j = await rp.json(); setPending(Array.isArray(j?.data) ? j.data : []) }
+                            }
+                          } catch { alert('Failed to decline') }
+                        }}
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </li>) )}
               </ul>
             )}
           </div>
