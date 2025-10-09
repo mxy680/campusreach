@@ -12,7 +12,7 @@ export default function Page() {
           <Link href="/auth/signup/organization">Sign up</Link>
         </Button>
         <Button asChild variant="default">
-          <Link href="/auth/signin">Sign in</Link>
+          <Link href="/auth/signin/user">Sign in</Link>
         </Button>
       </header>
 
@@ -24,7 +24,16 @@ export default function Page() {
               <p className="text-sm text-foreground/70">Continue with Google</p>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" onClick={() => signIn("google", { callbackUrl: "/org/dashboard" })}>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  try {
+                    // Allow account creation when starting from org sign-in
+                    document.cookie = "signup_intent=1; Max-Age=600; Path=/; SameSite=Lax";
+                  } catch {}
+                  return signIn("google", { callbackUrl: "/auth/signup/organization/start" });
+                }}
+              >
                 Continue with Google
               </Button>
               <p className="mt-3 text-xs text-center text-foreground/60">

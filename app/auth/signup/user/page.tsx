@@ -50,7 +50,7 @@ export default function Page() {
     <main className="min-h-[calc(100vh-4rem)] p-6 bg-gradient-to-b from-primary/20 via-transparent to-transparent">
       <header className="mb-6 flex justify-end gap-2">
         <Button asChild variant="outline">
-          <Link href="/auth/signin">Sign in</Link>
+          <Link href="/auth/signin/user">Sign in</Link>
         </Button>
         <Button asChild variant="default">
           <Link href="/auth/signup/user">Sign up</Link>

@@ -91,6 +91,7 @@ export async function middleware(req: NextRequest) {
   if (
     isAuthed &&
     !onOrgPaths &&
+    !onAuthPages &&
     role === "VOLUNTEER" &&
     typeof token?.email === "string" &&
     !token.email.toLowerCase().endsWith("@case.edu") &&

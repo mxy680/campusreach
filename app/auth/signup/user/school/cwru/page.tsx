@@ -13,7 +13,7 @@ export default function Page() {
             <Link href="/auth/signup/user">Sign up</Link>
           </Button>
           <Button asChild variant="default">
-            <Link href="/auth/signin">Sign in</Link>
+            <Link href="/auth/signin/user">Sign in</Link>
           </Button>
         </div>
       </header>

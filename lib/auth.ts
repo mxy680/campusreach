@@ -3,6 +3,7 @@ import type { Adapter } from "next-auth/adapters";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
 import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 
@@ -32,7 +33,13 @@ export const authOptions: NextAuthOptions = {
         if (email) {
           const existing = await prisma.user.findUnique({ where: { email } })
           if (!existing) {
-            // Abort sign-in and redirect to signup with error message
+            // If user came from signup, allow account creation
+            const c = await cookies()
+            const allowSignup = c.get("signup_intent")?.value === "1"
+            if (allowSignup) {
+              return true
+            }
+            // Otherwise send back to signup with a clear error
             return "/auth/signup/organization?error=no_account"
           }
           // Best-effort: sync Google avatar for existing users lacking image

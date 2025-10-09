@@ -9,7 +9,6 @@ export default function SignInClient() {
   const [loading, setLoading] = React.useState(false)
 
   const cb = params.get("callbackUrl") || "/"
-  const from = params.get("from") || undefined
   const mode = params.get("mode") || undefined
 
   return (
@@ -46,9 +45,6 @@ export default function SignInClient() {
           </span>
           {loading ? "Redirecting…" : "Continue with Google"}
         </button>
-        {from && (
-          <p className="mt-2 text-[11px] text-muted-foreground">After sign-in you’ll be returned to: {from}</p>
-        )}
         <p className="mt-4 text-[11px] text-muted-foreground">
           By continuing, you agree to our Terms and acknowledge our Privacy Policy.
         </p>
