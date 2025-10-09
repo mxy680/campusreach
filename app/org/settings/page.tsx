@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { signIn } from "next-auth/react"
+import Image from "next/image"
 
 export default function Page() {
   // Account info
@@ -14,6 +14,10 @@ export default function Page() {
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
   const [orgId, setOrgId] = React.useState<string | null>(null)
+  const [orgEmail, setOrgEmail] = React.useState<string>("")
+  const [userEmail, setUserEmail] = React.useState<string>("")
+  const [members, setMembers] = React.useState<Array<{ id: string; user: { id: string; name: string | null; email: string; image: string | null } }>>([])
+  const [baseUrl, setBaseUrl] = React.useState<string>("")
 
   // Browser-detected defaults
   const browserTz = React.useMemo(() => {
@@ -65,6 +69,9 @@ export default function Page() {
         const json = await r.json()
         setOrgName(json?.name ?? "")
         if (json?.id) setOrgId(json.id as string)
+        setOrgEmail((json?.email as string) || "")
+        setUserEmail((json?.userEmail as string) || "")
+        setBaseUrl((json?.baseUrl as string) || "")
         setTimezone((prev) => (json?.timezone as string) || prev)
         setLocale((prev) => (json?.locale as string) || prev)
         setDefaultLocation((prev) => (json?.defaultEventLocationTemplate as string) || prev)
@@ -75,7 +82,27 @@ export default function Page() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Member list removed; no loading of members needed
+  // Load members when we have orgId
+  React.useEffect(() => {
+    if (!orgId) return
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/org/members?orgId=${encodeURIComponent(orgId)}`, { cache: "no-store" })
+        if (!r.ok) return
+        const j = await r.json()
+        setMembers(Array.isArray(j?.data) ? j.data : [])
+      } catch { }
+    })()
+  }, [orgId])
+
+  // Invite URL helper
+  const inviteUrl = React.useMemo(() => {
+    if (!orgId) return ""
+    const base = (baseUrl || "").replace(/\/$/, "")
+    if (!base) return ""
+    return `${base}/auth/link-org?orgId=${encodeURIComponent(orgId)}`
+  }, [orgId, baseUrl])
+  const [copied, setCopied] = React.useState(false)
 
   return (
     <main className="p-4 space-y-6">
@@ -159,38 +186,101 @@ export default function Page() {
           </form>
         </CardContent>
       </Card>
+      
 
-      {/* Team members */}
+      {/* Team members (only for primary org account: orgEmail === userEmail) */}
+      {orgEmail && userEmail && orgEmail === userEmail && (
       <Card>
         <CardContent className="pt-6">
-          <div className="mb-4 flex items-start justify-between gap-2">
+          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <h2 className="text-base font-semibold">Team members</h2>
               <p className="text-sm text-muted-foreground">Allow coworkers to manage this organization.</p>
             </div>
-            <Button
-              className="bg-orange-500 text-white hover:bg-orange-600"
-              onClick={() => {
-                if (!orgId) return
-                const cb = `/auth/link-org?orgId=${encodeURIComponent(orgId)}`
-                signIn("google", { callbackUrl: cb })
-              }}
-            >
-              <span className="mr-2 inline-flex h-4 w-4 items-center justify-center">
-                {/* Google G logo (monochrome) */}
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
-                  <path d="M21.35 11.1h-8.9v2.98h5.1c-.22 1.3-.93 2.4-1.98 3.14l3.2 2.48c1.87-1.73 2.95-4.28 2.95-7.38 0-.64-.06-1.25-.17-1.83z" />
-                  <path d="M12.45 22c2.67 0 4.91-.88 6.55-2.39l-3.2-2.48c-.89.6-2.02.95-3.35.95-2.57 0-4.75-1.73-5.53-4.06H3.59v2.55A9.55 9.55 0 0 0 12.45 22z" />
-                  <path d="M6.92 13.99a5.73 5.73 0 0 1 0-3.98V7.46H3.59a9.57 9.57 0 0 0 0 9.08l3.33-2.55z" />
-                  <path d="M12.45 5.52c1.45 0 2.74.5 3.76 1.47l2.82-2.82A9.52 9.52 0 0 0 12.45 2 9.55 9.55 0 0 0 3.59 7.46l3.33 2.55c.78-2.33 2.96-4.49 5.53-4.49z" />
-                </svg>
-              </span>
-              Add team member
-            </Button>
+            <div className="w-full md:w-auto md:min-w-[640px]">
+              <Label className="mb-1 block text-xs text-muted-foreground">Invite link</Label>
+              <div className="flex items-center gap-2">
+                <Input value={inviteUrl} readOnly placeholder="Invite link appears here" className="flex-1" />
+                <Button
+                  type="button"
+                  className="bg-orange-500 text-white hover:bg-orange-600"
+                  disabled={!inviteUrl}
+                  onClick={async () => {
+                    if (!inviteUrl) return
+                    try {
+                      await navigator.clipboard.writeText(inviteUrl)
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 1500)
+                    } catch {}
+                  }}
+                >
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">Share this link with a coworker. They’ll sign in with Google and be added to your org.</p>
+            </div>
           </div>
-          {/* Member list removed per request */}
+          <div className="space-y-2">
+            {members.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No members yet.</div>
+            ) : (
+              <ul className="divide-y">
+                {members.map((m) => (
+                  <li key={m.id} className="flex items-center gap-3 py-2">
+                    {m.user.image ? (
+                      <Image src={m.user.image} alt={m.user.name ?? m.user.email} width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[10px] text-foreground/70">
+                        {(m.user.name ?? m.user.email ?? "").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate">{m.user.name ?? m.user.email}</div>
+                      <div className="text-xs text-muted-foreground truncate">{m.user.email}</div>
+                    </div>
+                    <div className="shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="text-red-600 hover:bg-red-50"
+                        disabled={m.user.email === orgEmail}
+                        title={m.user.email === orgEmail ? "Cannot remove the organization owner" : "Remove member"}
+                        onClick={async () => {
+                          if (!orgId) return
+                          const confirmed = window.confirm(`Remove ${m.user.email}? This deletes their entire account.`)
+                          if (!confirmed) return
+                          try {
+                            const res = await fetch("/api/org/members", {
+                              method: "DELETE",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ orgId, userId: m.user.id }),
+                            })
+                            if (!res.ok) {
+                              alert("Failed to remove member")
+                              return
+                            }
+                            // Refresh list
+                            const r = await fetch(`/api/org/members?orgId=${encodeURIComponent(orgId)}`, { cache: "no-store" })
+                            if (r.ok) {
+                              const j = await r.json()
+                              setMembers(Array.isArray(j?.data) ? j.data : [])
+                            }
+                          } catch {
+                            alert("Failed to remove member")
+                          }
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Data export */}
       <Card>

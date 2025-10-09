@@ -106,12 +106,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find org via user email (same strategy as /api/org/me)
-    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+    // Resolve organization: prefer membership; fallback to email heuristic
     let organizationId: string | null = null;
-    if (user?.email) {
-      const org = await prisma.organization.findFirst({ where: { email: user.email } });
-      organizationId = org?.id ?? null;
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id }, select: { organizationId: true } })
+    if (member?.organizationId) {
+      organizationId = member.organizationId
+    } else {
+      const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } });
+      if (user?.email) {
+        const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } });
+        organizationId = org?.id ?? null;
+      }
     }
 
     const form = await req.formData();
@@ -215,12 +220,17 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Derive org by user email (same heuristic used in POST)
-    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+    // Derive org by membership first; fallback to email
     let organizationId: string | null = null;
-    if (user?.email) {
-      const org = await prisma.organization.findFirst({ where: { email: user.email } });
-      organizationId = org?.id ?? null;
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id }, select: { organizationId: true } })
+    if (member?.organizationId) {
+      organizationId = member.organizationId
+    } else {
+      const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } });
+      if (user?.email) {
+        const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } });
+        organizationId = org?.id ?? null;
+      }
     }
 
     const where = organizationId ? { organizationId } : {};
@@ -274,12 +284,17 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Resolve org by email (same heuristic as POST/GET)
-    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+    // Resolve org by membership first; fallback to email (same approach as POST/GET)
     let organizationId: string | null = null
-    if (user?.email) {
-      const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
-      organizationId = org?.id ?? null
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id }, select: { organizationId: true } })
+    if (member?.organizationId) {
+      organizationId = member.organizationId
+    } else {
+      const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+      if (user?.email) {
+        const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
+        organizationId = org?.id ?? null
+      }
     }
 
     const form = await req.formData()
@@ -381,12 +396,17 @@ export async function DELETE(req: Request) {
     const id = searchParams.get("id")
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
-    // Verify event belongs to the org associated with this user (email heuristic)
-    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+    // Verify event belongs to an org associated with this user (membership preferred, fallback email)
     let orgId: string | null = null
-    if (user?.email) {
-      const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
-      orgId = org?.id ?? null
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id }, select: { organizationId: true } })
+    if (member?.organizationId) {
+      orgId = member.organizationId
+    } else {
+      const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+      if (user?.email) {
+        const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
+        orgId = org?.id ?? null
+      }
     }
 
     const ev = await prisma.event.findUnique({ where: { id }, select: { organizationId: true } })

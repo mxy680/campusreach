@@ -45,7 +45,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ eventId
 
   // Preload org info and member userIds for author display
   const org = event.organizationId
-    ? await prisma.organization.findUnique({ where: { id: event.organizationId }, select: { id: true, name: true, email: true, contactEmail: true } })
+    ? await prisma.organization.findUnique({ where: { id: event.organizationId }, select: { id: true, name: true, email: true, contactEmail: true, avatarUrl: true } })
     : null
   const orgMemberUserIds = event.organizationId
     ? (() => {
@@ -97,7 +97,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ eventId
         authorName = org.name || authorName
       }
     }
-    return { ...m, authorName }
+    // Use org avatar as fallback for org member authors
+    const isOrgSide = org ? ((m.userId ? memberIdsSet.has(m.userId) : false) || (m.user?.email && (m.user.email === org.email || m.user.email === org.contactEmail))) : false
+    const user = m.user ? { ...m.user, image: m.user.image || (isOrgSide ? org?.avatarUrl || null : m.user.image) } : m.user
+    return { ...m, user, authorName }
   })
 
   const nextCursor = messages.length === limit ? messages[messages.length - 1].id : null
@@ -179,6 +182,9 @@ export async function POST(req: NextRequest, context: { params: Promise<{ eventI
       authorName = org.name || authorName
     }
   }
+  // Fallback avatar for org-side authors
+  const isOrgSide = org ? ((msg.userId ? !!(await prisma.organizationMember.findFirst({ where: { organizationId: org.id, userId: msg.userId! }, select: { id: true } })) : false) || (msg.user?.email && (msg.user.email === org.email || msg.user.email === org.contactEmail))) : false
+  const user = msg.user ? { ...msg.user, image: msg.user.image || (isOrgSide ? org?.avatarUrl || null : msg.user.image) } : msg.user
 
-  return NextResponse.json({ ok: true, data: { ...msg, authorName } })
+  return NextResponse.json({ ok: true, data: { ...msg, user, authorName } })
 }

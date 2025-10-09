@@ -91,15 +91,23 @@ export async function POST(req: Request) {
       }
     }
 
-    await prisma.organization.create({
+    const created = await prisma.organization.create({
       data: {
         name,
         email: session.user.email ?? null,
         website: website || null,
         slug,
         logoUrl: uploadedLogoUrl,
+        avatarUrl: uploadedLogoUrl || sourceImageUrl || null,
       },
     });
+
+    // Ensure the creator is a member of this organization
+    await prisma.organizationMember.upsert({
+      where: { organizationId_userId: { organizationId: created.id, userId: session.user.id } },
+      create: { organizationId: created.id, userId: session.user.id },
+      update: {},
+    })
 
     // Mark the user's profile as complete for ORGANIZATION accounts
     await prisma.user.update({

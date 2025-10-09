@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 type OrgMe = {
   user: { id: string; email: string | null; name: string | null; image: string | null; role: string }
-  organization: { name: string | null }
+  organization: { name: string | null; avatarUrl?: string | null } | null
 }
 
 const data = {
@@ -79,7 +79,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     // Show organization name on top
     name: orgName,
     email: me?.user?.email ?? "",
-    avatar: me?.user?.image ?? "/avatars/shadcn.jpg",
+    avatar: me?.organization?.avatarUrl || me?.user?.image || "/avatars/shadcn.jpg",
   }
 
   return (

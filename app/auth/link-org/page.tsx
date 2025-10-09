@@ -1,43 +1,48 @@
-"use client"
+import { redirect } from "next/navigation"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 
-import * as React from "react"
-import { Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+export default async function LinkOrgPage({ searchParams }: { searchParams: { orgId?: string } }) {
+  const orgId = searchParams?.orgId
+  if (!orgId) redirect("/org/settings")
 
-function LinkOrgInner() {
-  const router = useRouter()
-  const params = useSearchParams()
+  const session = await getServerSession(authOptions)
+  const currentUrl = `/auth/link-org?orgId=${encodeURIComponent(orgId!)}`
 
-  React.useEffect(() => {
-    const orgId = params.get("orgId")
-    if (!orgId) {
-      router.replace("/org/settings")
-      return
+  // If not authenticated, send to Google sign-in and return here
+  if (!session?.user?.id) {
+    redirect(`/api/auth/signin/google?callbackUrl=${encodeURIComponent(currentUrl)}`)
+  }
+
+  // Authenticated: validate org and user exist in this database
+  const org = await prisma.organization.findUnique({ where: { id: orgId! }, select: { id: true } })
+  if (!org) {
+    // The orgId in the invite doesn't exist in this environment/database
+    redirect(`/org/settings?error=org_not_found`)
+  }
+
+  // Ensure the User row exists (adapter should create it on Google sign-in)
+  let user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true } })
+  if (!user && session.user.email) {
+    // Fallback: try to find by email in case the JWT has an id from a different env
+    const byEmail = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
+    if (byEmail) {
+      user = byEmail
     }
-    ;(async () => {
-      try {
-        await fetch("/api/org/members", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orgId }),
-        })
-      } finally {
-        router.replace("/org/settings")
-      }
-    })()
-  }, [params, router])
+  }
+  if (!user) {
+    // Cannot proceed without a user row in this DB
+    redirect(`/api/auth/signin/google?callbackUrl=${encodeURIComponent(currentUrl)}`)
+  }
 
-  return (
-    <main className="p-6">
-      <div className="text-sm text-muted-foreground">Linking your Google account to the organization…</div>
-    </main>
-  )
-}
+  // Link immediately on the server to the target org
+  await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgId!, userId: user!.id } },
+    create: { organizationId: orgId!, userId: user!.id },
+    update: {},
+  })
+  await prisma.user.update({ where: { id: user!.id }, data: { role: "ORGANIZATION", profileComplete: true } })
 
-export default function LinkOrgPage() {
-  return (
-    <Suspense fallback={<main className="p-6"><div className="text-sm text-muted-foreground">Preparing…</div></main>}>
-      <LinkOrgInner />
-    </Suspense>
-  )
+  redirect("/org/settings?linked=1")
 }

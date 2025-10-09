@@ -8,14 +8,22 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  // Resolve org by the org user's email (same heuristic used elsewhere)
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
-  if (!user?.email) return NextResponse.json({ data: [] })
-  const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
-  if (!org?.id) return NextResponse.json({ data: [] })
+  // Resolve organization: prefer membership; fallback to email heuristic
+  let orgId: string | null = null
+  const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id }, select: { organizationId: true } })
+  if (member?.organizationId) {
+    orgId = member.organizationId
+  } else {
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+    if (user?.email) {
+      const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
+      orgId = org?.id ?? null
+    }
+  }
+  if (!orgId) return NextResponse.json({ data: [] })
 
   const msgs = await prisma.chatMessage.findMany({
-    where: { event: { organizationId: org.id } },
+    where: { event: { organizationId: orgId } },
     orderBy: { createdAt: "desc" },
     take: 20,
     include: {

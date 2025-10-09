@@ -7,12 +7,17 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  // Derive org by user email (heuristic used elsewhere)
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+  // Resolve organization by membership first; fallback to user email heuristic
   let orgId: string | null = null
-  if (user?.email) {
-    const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
-    orgId = org?.id ?? null
+  const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id }, select: { organizationId: true } })
+  if (member?.organizationId) {
+    orgId = member.organizationId
+  } else {
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+    if (user?.email) {
+      const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
+      orgId = org?.id ?? null
+    }
   }
 
   const where = orgId ? { organizationId: orgId } : {}

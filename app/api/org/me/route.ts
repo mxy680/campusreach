@@ -13,11 +13,16 @@ export async function GET() {
     const user = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // Find organization by the same email as the user
-    let orgName: string | null = null;
-    if (user.email) {
-      const org = await prisma.organization.findFirst({ where: { email: user.email } });
-      orgName = org?.name ?? null;
+    // Resolve organization: prefer membership; fallback to email heuristic
+    let org = null as null | { id: string; name: string | null; email: string | null; avatarUrl: string | null; slug: string | null }
+    const member = await prisma.organizationMember.findFirst({ where: { userId: user.id }, select: { organizationId: true } })
+    if (member?.organizationId) {
+      const o = await prisma.organization.findUnique({ where: { id: member.organizationId }, select: { id: true, name: true, email: true, avatarUrl: true, slug: true } })
+      if (o) org = o
+    }
+    if (!org && user.email) {
+      const o = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true, name: true, email: true, avatarUrl: true, slug: true } })
+      if (o) org = o
     }
 
     return NextResponse.json({
@@ -28,9 +33,7 @@ export async function GET() {
         image: user.image,
         role: user.role,
       },
-      organization: {
-        name: orgName,
-      },
+      organization: org,
     });
   } catch (err) {
     console.error("GET /api/org/me error", err);

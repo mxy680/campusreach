@@ -13,9 +13,22 @@ export async function GET(req: Request) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    // Ensure requester is a member of the org
-    const member = await prisma.organizationMember.findFirst({ where: { organizationId: orgId, userId: session.user.id } })
-    if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    // Ensure requester is allowed: either a member, or the org owner (email match)
+    let member = await prisma.organizationMember.findFirst({ where: { organizationId: orgId, userId: session.user.id } })
+    if (!member) {
+      const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+      const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { email: true, contactEmail: true } })
+      const isOwnerByEmail = !!(user?.email && org && (org.email === user.email || org.contactEmail === user.email))
+      if (!isOwnerByEmail) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+      // Backfill membership for owner so future checks pass
+      member = await prisma.organizationMember.upsert({
+        where: { organizationId_userId: { organizationId: orgId, userId: session.user.id } },
+        create: { organizationId: orgId, userId: session.user.id },
+        update: {},
+      })
+    }
 
     const members = await prisma.organizationMember.findMany({
       where: { organizationId: orgId },
@@ -28,27 +41,41 @@ export async function GET(req: Request) {
   }
 }
 
-// DELETE /api/org/members { orgId, userId }
-// Removes a member from the organization. Requester must be a member.
+// DELETE /api/org/members
+// body: { orgId: string, userId: string }
 export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    const body = await req.json().catch(() => ({})) as { orgId?: string; userId?: string }
-    const orgId = body.orgId
-    const userId = body.userId
-    if (!orgId || !userId) return NextResponse.json({ error: "Missing fields" }, { status: 400 })
 
-    // Ensure requester is a member of the org
-    const requester = await prisma.organizationMember.findFirst({ where: { organizationId: orgId, userId: session.user.id } })
-    if (!requester) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const body = await req.json().catch(() => null) as { orgId?: string; userId?: string } | null
+    const orgId = body?.orgId
+    const userId = body?.userId
+    if (!orgId || !userId) return NextResponse.json({ error: "Missing orgId or userId" }, { status: 400 })
 
-    // Prevent removing yourself to avoid lockout via UI (optional)
-    // if (userId === session.user.id) return NextResponse.json({ error: "Cannot remove yourself" }, { status: 400 })
+    // Only the org owner (email match) can remove members
+    const [actingUser, org] = await Promise.all([
+      prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } }),
+      prisma.organization.findUnique({ where: { id: orgId }, select: { email: true, contactEmail: true } }),
+    ])
+    const isOwner = !!(actingUser?.email && org && (org.email === actingUser.email || org.contactEmail === actingUser.email))
+    if (!isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-    await prisma.organizationMember.delete({ where: { organizationId_userId: { organizationId: orgId, userId } } })
+    // Do not allow removing the owner account itself
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+    if (target?.email && org && (target.email === org.email || target.email === org.contactEmail)) {
+      return NextResponse.json({ error: "Cannot remove organization owner" }, { status: 400 })
+    }
+
+    // Delete membership and the user account. Other rows with FKs must be set to cascade or handled accordingly.
+    await prisma.$transaction(async (tx) => {
+      await tx.organizationMember.deleteMany({ where: { organizationId: orgId, userId } })
+      await tx.user.delete({ where: { id: userId } })
+    })
+
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (e) {
+    console.error("DELETE /api/org/members error", e)
     return NextResponse.json({ error: "Server error" }, { status: 500 })
   }
 }
@@ -68,6 +95,8 @@ export async function POST(req: Request) {
       create: { organizationId: orgId, userId: session.user.id },
       update: {},
     })
+    // Ensure user role is ORGANIZATION and mark profileComplete to bypass user onboarding
+    await prisma.user.update({ where: { id: session.user.id }, data: { role: "ORGANIZATION", profileComplete: true } })
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 })

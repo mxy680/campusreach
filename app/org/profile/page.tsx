@@ -13,6 +13,7 @@ import { toast } from "sonner"
 
 type OrgProfile = {
   name: string
+  avatarUrl?: string
   logoUrl: string
   description: string
   mission: string
@@ -32,6 +33,7 @@ type OrgProfileApi = {
   id: string
   slug: string | null
   name: string
+  avatarUrl: string | null
   logoUrl: string | null
   description: string | null
   mission: string | null
@@ -72,6 +74,7 @@ export default function Page() {
   const [logoFile, setLogoFile] = React.useState<File | null>(null)
   const [data, setData] = React.useState<OrgProfile>(() => ({
     name: "",
+    avatarUrl: "",
     logoUrl: "",
     description: "",
     mission: "",
@@ -92,8 +95,8 @@ export default function Page() {
 
   const logoPreview = React.useMemo(() => {
     if (logoFile) return URL.createObjectURL(logoFile)
-    return userImage
-  }, [logoFile, userImage])
+    return data.avatarUrl || userImage
+  }, [logoFile, data.avatarUrl, userImage])
 
   React.useEffect(() => {
     return () => {
@@ -114,7 +117,7 @@ export default function Page() {
     })()
   }, [])
 
-  // No longer prefilling organization.logoUrl from user image; avatar display reads from User.image
+  // No longer prefilling organization.logoUrl from user image; avatar display reads from Organization.avatarUrl (fallback User.image)
 
   function update<K extends keyof OrgProfile>(key: K, value: OrgProfile[K]) {
     setData((prev) => ({ ...prev, [key]: value }))
@@ -143,6 +146,7 @@ export default function Page() {
         const org: OrgProfileApi | undefined = j2?.data as OrgProfileApi | undefined
         const p: Partial<OrgProfile> = {
           name: org?.name ?? "",
+          avatarUrl: org?.avatarUrl ?? undefined,
           logoUrl: org?.logoUrl ?? undefined,
           description: org?.description ?? undefined,
           mission: org?.mission ?? undefined,
@@ -159,6 +163,7 @@ export default function Page() {
         const fetchedSlug = org?.slug ?? undefined
         setData({
           name: p?.name ?? "",
+          avatarUrl: p?.avatarUrl ?? "",
           logoUrl: p?.logoUrl ?? "",
           description: p?.description ?? "",
           mission: p?.mission ?? "",
@@ -316,6 +321,7 @@ export default function Page() {
                           const j = (await res.json()) as { url?: string }
                           if (j?.url) {
                             setUserImage(j.url)
+                            setData(prev => ({ ...prev, avatarUrl: j.url }))
                           }
                         } catch {
                           // keep silent here; a toast is already used elsewhere; optional to add one

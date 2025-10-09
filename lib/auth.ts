@@ -18,6 +18,8 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   providers,
   pages: {
+    // Custom sign-in UI
+    signIn: "/auth/signin",
     // Route all auth errors to org signup so users see a friendly message when attempting Google signup with an existing email
     error: "/auth/signup/organization",
   },

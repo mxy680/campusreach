@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
       id: true,
       slug: true,
       name: true,
+      avatarUrl: true,
       logoUrl: true,
       description: true,
       mission: true,
@@ -37,6 +38,7 @@ export async function PUT(req: NextRequest) {
     orgId?: string
     profile?: {
       name?: string | null
+      avatarUrl?: string | null
       logoUrl?: string | null
       description?: string | null
       mission?: string | null
@@ -61,6 +63,7 @@ export async function PUT(req: NextRequest) {
       where: { id: orgId },
       data: {
         name: (profile.name ?? undefined)?.toString().trim(),
+        avatarUrl: profile.avatarUrl ?? undefined,
         logoUrl: profile.logoUrl ?? undefined,
         description: profile.description ?? undefined,
         mission: profile.mission ?? undefined,

@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /// Rating given by a volunteer to an event (after it is over)
@@ -8,7 +9,7 @@ model EventRating {
   id          String   @id @default(cuid())
   eventId     String
   volunteerId String
-  rating      Int      /// 1-5
+  rating      Int /// 1-5
   comment     String?
   createdAt   DateTime @default(now())
 
@@ -109,6 +110,7 @@ model Organization {
   website  String?
 
   // Profile fields
+  avatarUrl                    String?
   logoUrl                      String?
   description                  String?
   mission                      String?
@@ -127,28 +129,26 @@ model Organization {
   defaultTimeCommitmentHours   Int?
   defaultVolunteersNeeded      Int?
 
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
   /// Events hosted by this organization
-  events        Event[]
-  /// Resources published by this organization
-  resources     Resource[]
+  events    Event[]
   /// Members (users) that can manage this organization
-  members       OrganizationMember[]
+  members   OrganizationMember[]
 
   /// Additional contacts
-  contacts      OrganizationContact[]
+  contacts OrganizationContact[]
 }
 
 model OrganizationContact {
-  id            String       @id @default(cuid())
-  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId String
-  name          String
-  email         String?
-  phone         String?
-  role          String?
-  createdAt     DateTime     @default(now())
+  name           String
+  email          String?
+  phone          String?
+  role           String?
+  createdAt      DateTime     @default(now())
 }
 
 model Volunteer {
@@ -156,7 +156,7 @@ model Volunteer {
   userId String @unique
 
   // Public profile
-  slug   String? @unique
+  slug String? @unique
 
   // Profile fields
   firstName      String
@@ -176,10 +176,10 @@ model Volunteer {
   weeklyGoalHours Int?
 
   // Relations
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  signups       EventSignup[]
-  timeEntries   TimeEntry[]
-  ratings       EventRating[]
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signups     EventSignup[]
+  timeEntries TimeEntry[]
+  ratings     EventRating[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -241,7 +241,7 @@ enum SignupStatus {
 
 /// Message types within an event group chat
 enum ChatMessageKind {
-  MESSAGE      /// regular user/org message
+  MESSAGE /// regular user/org message
   ANNOUNCEMENT /// organization announcement
 }
 
@@ -251,7 +251,7 @@ model GroupChat {
   eventId   String   @unique
   createdAt DateTime @default(now())
 
-  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
 }
 
@@ -263,47 +263,24 @@ enum MessageAuthorType {
 
 /// Group chat messages
 model ChatMessage {
-  id           String            @id @default(cuid())
-  groupChatId  String?
-  eventId      String?
-  userId       String?
-  authorType   MessageAuthorType @default(USER)
-  kind         ChatMessageKind   @default(MESSAGE)
-  body         String
-  createdAt    DateTime          @default(now())
+  id          String            @id @default(cuid())
+  groupChatId String?
+  eventId     String?
+  userId      String?
+  authorType  MessageAuthorType @default(USER)
+  kind        ChatMessageKind   @default(MESSAGE)
+  body        String
+  createdAt   DateTime          @default(now())
 
   groupChat GroupChat? @relation(fields: [groupChatId], references: [id], onDelete: Cascade)
   event     Event?     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([groupChatId, createdAt])
   @@index([eventId, createdAt])
 }
 
-
-/// Learning materials and links
-model Resource {
-  id             String       @id @default(cuid())
-  title          String
-  kind           ResourceKind
-  description    String?
-  url            String
-  size           String?
-  duration       String?
-  tags           String[]
-  organizationId String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-}
-
-enum ResourceKind {
-  PDF
-  LINK
-  VIDEO
-}
+// Removed Resource model and ResourceKind enum as unused
 
 /// Per-user notification preferences
 model NotificationPreference {
