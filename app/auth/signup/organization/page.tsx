@@ -10,9 +10,17 @@ function ErrorBanner() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   if (!error) return null;
+
+  let message = "There was a problem. Please try again.";
+  if (error === "no_account") {
+    message = "No account found for this email. Please sign up to continue.";
+  } else if (error === "account_exists") {
+    message = "An account with this email already exists. Please sign in instead.";
+  }
+
   return (
     <div className="text-sm text-destructive border border-destructive/40 bg-destructive/5 rounded-md p-3 mb-4 text-center">
-      An account with this email already exists. Please sign in instead.
+      {message}
     </div>
   );
 }
