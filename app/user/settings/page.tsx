@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -137,37 +137,6 @@ export default function Page() {
             </Button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm text-muted-foreground">Reset account settings and profile to defaults (non-destructive).</div>
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                if (!emailFromSession) return
-                const r = await fetch(`/api/user/settings/reset`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ email: emailFromSession }),
-                })
-                if (!r.ok) {
-                  toast("Reset failed", { description: "Please try again." })
-                  return
-                }
-                toast("Account reset", { description: "Your settings were reset to defaults." })
-                // re-load
-                const ref = await fetch(`/api/user/settings?email=${encodeURIComponent(emailFromSession)}`)
-                if (ref.ok) {
-                  const json = await ref.json()
-                  setName(json?.user?.name ?? "")
-                  setEmail(json?.user?.email ?? "")
-                  setNotifEmail(!!json?.notifications?.emailUpdates)
-                  setNotifPush(!!json?.notifications?.pushEnabled)
-                  setNotifDigest(!!json?.notifications?.weeklyDigest)
-                }
-              }}
-            >
-              Reset account
-            </Button>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-muted-foreground">Deactivate your account and remove access to CampusReach.</div>
             <Button variant="destructive" onClick={() => setConfirmOpen(true)}>Deactivate account</Button>
           </div>
@@ -186,9 +155,19 @@ export default function Page() {
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                setConfirmOpen(false)
-                toast("Deactivation requested", { description: "This feature will be enabled soon." })
+              onClick={async () => {
+                try {
+                  const res = await fetch("/api/user/deactivate", { method: "DELETE" })
+                  if (!res.ok) {
+                    toast("Failed to deactivate", { description: "Please try again." })
+                    return
+                  }
+                  // Close dialog then sign out to clear session
+                  setConfirmOpen(false)
+                  await signOut({ callbackUrl: "/" })
+                } catch (e) {
+                  toast("Failed to deactivate", { description: "Please try again." })
+                }
               }}
             >
               Confirm deactivate
