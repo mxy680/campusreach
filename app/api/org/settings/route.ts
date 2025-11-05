@@ -64,18 +64,12 @@ export async function PUT(req: Request) {
   const defaultVolunteersNeeded = body?.defaultVolunteersNeeded as number | undefined
   if (!name) return NextResponse.json({ error: "Missing name" }, { status: 400 })
 
-  // Resolve organization by membership first; fallback to email heuristic
-  let orgIdResolved: string | null = null
-  const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id }, select: { organizationId: true } })
-  if (member?.organizationId) orgIdResolved = member.organizationId
-  if (!orgIdResolved) {
-    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
-    if (user?.email) {
-      const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
-      orgIdResolved = org?.id ?? null
-    }
-  }
-  if (!orgIdResolved) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+  // Owner-only: resolve org by matching user's email to org.email or org.contactEmail
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
+  if (!user?.email) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+  const ownerOrg = await prisma.organization.findFirst({ where: { OR: [{ email: user.email }, { contactEmail: user.email }] }, select: { id: true } })
+  const orgIdResolved = ownerOrg?.id ?? null
+  if (!orgIdResolved) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const updated = await prisma.organization.update({
     where: { id: orgIdResolved },

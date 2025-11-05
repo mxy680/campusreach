@@ -25,13 +25,11 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get("type") as "signups" | "volunteers" | "messages" | "account" | null
     if (!type) return NextResponse.json({ error: "Missing type" }, { status: 400 })
 
-    // Resolve org by current user's email (same as org/settings), then ensure requester is a member
-    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true, id: true } })
+    // Owner-only: resolve org by matching user's email to org.email or org.contactEmail
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
     if (!user?.email) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
-    const org = await prisma.organization.findFirst({ where: { email: user.email }, select: { id: true } })
-    if (!org?.id) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
-    const member = await prisma.organizationMember.findFirst({ where: { organizationId: org.id, userId: session.user.id } })
-    if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const org = await prisma.organization.findFirst({ where: { OR: [{ email: user.email }, { contactEmail: user.email }] }, select: { id: true } })
+    if (!org?.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
     let csv = ""
     let filename = "export.csv"

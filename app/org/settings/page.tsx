@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,6 +16,7 @@ export default function Page() {
   const [saving, setSaving] = React.useState(false)
   const [orgId, setOrgId] = React.useState<string | null>(null)
   const [orgEmail, setOrgEmail] = React.useState<string>("")
+  const [orgContactEmail, setOrgContactEmail] = React.useState<string>("")
   const [userEmail, setUserEmail] = React.useState<string>("")
   const [members, setMembers] = React.useState<Array<{ id: string; user: { id: string; name: string | null; email: string; image: string | null } }>>([])
   const [pending, setPending] = React.useState<Array<{ id: string; message: string | null; createdAt: string; user: { id: string; name: string | null; email: string; image: string | null } }>>([])
@@ -42,6 +44,7 @@ export default function Page() {
   const [defaultLocation, setDefaultLocation] = React.useState<string>("")
   const [defaultHours, setDefaultHours] = React.useState<number | undefined>(2)
   const [defaultVolunteers, setDefaultVolunteers] = React.useState<number | undefined>(10)
+  const [deleting, setDeleting] = React.useState(false)
 
   // Simple option lists; can be expanded
   const timezones = React.useMemo(() => {
@@ -71,6 +74,7 @@ export default function Page() {
         setOrgName(json?.name ?? "")
         if (json?.id) setOrgId(json.id as string)
         setOrgEmail((json?.email as string) || "")
+        setOrgContactEmail((json?.contactEmail as string) || "")
         setUserEmail((json?.userEmail as string) || "")
         // baseUrl no longer used
         setTimezone((prev) => (json?.timezone as string) || prev)
@@ -351,12 +355,33 @@ export default function Page() {
               <p className="text-sm text-muted-foreground">Export a full JSON snapshot of your data.</p>
             </div>
             <div className="shrink-0">
-              <Button
-                className="bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:pointer-events-none"
-                disabled
-              >
-                Export as JSON
-              </Button>
+              {(() => {
+                const isOwner = Boolean(userEmail) && (userEmail === orgEmail || (!!orgContactEmail && userEmail === orgContactEmail))
+                const disabled = loading || saving || !isOwner
+                return (
+                <Button
+                  className="bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:pointer-events-none"
+                  disabled={disabled}
+                  onClick={async () => {
+                    try {
+                      const r = await fetch("/api/org/export?type=account")
+                      if (!r.ok) return
+                      const blob = await r.blob()
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement("a")
+                      a.href = url
+                      a.download = `organization-${orgId || "account"}.json`
+                      document.body.appendChild(a)
+                      a.click()
+                      a.remove()
+                      URL.revokeObjectURL(url)
+                    } catch {}
+                  }}
+                >
+                  Export as JSON
+                </Button>
+                )
+              })()}
             </div>
           </div>
         </CardContent>
@@ -371,14 +396,67 @@ export default function Page() {
               <p className="text-sm text-muted-foreground">Be careful—this action is permanent.</p>
             </div>
             <div className="shrink-0">
-              <Button
-                variant="destructive"
-                disabled
-                className="disabled:opacity-50 disabled:pointer-events-none"
-                title="Temporarily disabled"
-              >
-                Delete organization (disabled)
-              </Button>
+              {(() => {
+                const isOwner = Boolean(userEmail) && (userEmail === orgEmail || (!!orgContactEmail && userEmail === orgContactEmail))
+                const disabled = loading || saving || deleting
+                if (isOwner) {
+                  return (
+                    <Button
+                      variant="destructive"
+                      disabled={disabled}
+                      className="disabled:opacity-50 disabled:pointer-events-none"
+                      title="Delete this organization"
+                      onClick={async () => {
+                        const confirmed = window.confirm("This will permanently delete the organization and all related data. Continue?")
+                        if (!confirmed) return
+                        try {
+                          setDeleting(true)
+                          const r = await fetch("/api/org/delete", { method: "DELETE" })
+                          if (!r.ok) {
+                            alert("Failed to delete organization")
+                            return
+                          }
+                          await signOut({ callbackUrl: "/" })
+                        } catch {
+                          alert("Failed to delete organization")
+                        } finally {
+                          setDeleting(false)
+                        }
+                      }}
+                    >
+                      {deleting ? "Deleting…" : "Delete organization"}
+                    </Button>
+                  )
+                }
+                // Non-owner: allow deleting their own account
+                return (
+                  <Button
+                    variant="destructive"
+                    disabled={disabled}
+                    className="disabled:opacity-50 disabled:pointer-events-none"
+                    title="Delete my account"
+                    onClick={async () => {
+                      const confirmed = window.confirm("This will permanently delete your account and remove your access to this org. Continue?")
+                      if (!confirmed) return
+                      try {
+                        setDeleting(true)
+                        const r = await fetch("/api/user/deactivate", { method: "DELETE" })
+                        if (!r.ok) {
+                          alert("Failed to delete account")
+                          return
+                        }
+                        await signOut({ callbackUrl: "/" })
+                      } catch {
+                        alert("Failed to delete account")
+                      } finally {
+                        setDeleting(false)
+                      }
+                    }}
+                  >
+                    {deleting ? "Deleting…" : "Delete my account"}
+                  </Button>
+                )
+              })()}
             </div>
           </div>
         </CardContent>
