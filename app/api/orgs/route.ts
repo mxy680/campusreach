@@ -1,3 +1,4 @@
+// Keeping this file as-is to avoid breaking other uses. A new secured route will be added at /api/orgs/mine.
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 

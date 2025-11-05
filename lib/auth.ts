@@ -51,7 +51,7 @@ export const authOptions: NextAuthOptions = {
               const approved = await prisma.organizationJoinRequest.findFirst({ where: { userId: existing.id, status: "APPROVED" } })
               hasOrgAccess = !!(member || approved || existing.role === "ORGANIZATION")
             }
-          } catch {}
+          } catch { }
 
           // Only enforce volunteer school domain when NOT in an organization flow
           if (isVolunteerSignup && !allowSignup && !orgJoinOrgId && !hasOrgAccess) {
@@ -93,14 +93,14 @@ export const authOptions: NextAuthOptions = {
               const anyMember = await prisma.organizationMember.findFirst({ where: { userId: userId! } })
               const anyApproved = await prisma.organizationJoinRequest.findFirst({ where: { userId: userId!, status: "APPROVED" } })
               if (anyMember || anyApproved) {
-                try { (await cookies()).set("org_join_orgId", "", { maxAge: 0, path: "/" }) } catch {}
+                try { (await cookies()).set("org_join_orgId", "", { maxAge: 0, path: "/" }) } catch { }
                 return true
               }
-            } catch {}
+            } catch { }
             const orgId = orgJoinOrgId
             // Ensure role is ORGANIZATION
             if (userId && existing?.role !== "ORGANIZATION") {
-              try { await prisma.user.update({ where: { id: userId }, data: { role: "ORGANIZATION" } }) } catch {}
+              try { await prisma.user.update({ where: { id: userId }, data: { role: "ORGANIZATION" } }) } catch { }
             }
             // Create join request if not already present/pending
             try {
@@ -112,7 +112,7 @@ export const authOptions: NextAuthOptions = {
                   data: { organizationId: orgId, userId, status: "PENDING" },
                 })
               }
-            } catch {}
+            } catch { }
             // Force sign-out and return to org signup with success toast param (no UI page)
             return "/auth/signout/auto?callbackUrl=" + encodeURIComponent("/auth/signup/organization?joined=1")
           }
@@ -125,12 +125,12 @@ export const authOptions: NextAuthOptions = {
               if (!anyMember && !anyApproved) {
                 const anyPending = await prisma.organizationJoinRequest.findFirst({ where: { userId: existing.id, status: "PENDING" } })
                 if (anyPending) {
-                  try { (await cookies()).set("org_join_orgId", "", { maxAge: 0, path: "/" }) } catch {}
+                  try { (await cookies()).set("org_join_orgId", "", { maxAge: 0, path: "/" }) } catch { }
                   return "/auth/signin?error=org_pending"
                 }
               }
             }
-          } catch {}
+          } catch { }
 
           // Organization/general flow: do NOT allow auto-creation.
           // If not an existing user and no explicit signup intent, remove any accidental creation and redirect to volunteer signup.
@@ -141,7 +141,7 @@ export const authOptions: NextAuthOptions = {
               if (created) {
                 await prisma.user.delete({ where: { id: created.id } })
               }
-            } catch {}
+            } catch { }
             return "/auth/signup/user?error=no_account"
           }
           // Best-effort: sync Google avatar for existing users lacking image

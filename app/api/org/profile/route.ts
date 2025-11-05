@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const orgId = searchParams.get("orgId")
   if (!orgId) return NextResponse.json({ error: "Missing orgId" }, { status: 400 })
+
+  // Authorization: user must be a member of this org OR have an approved join request
+  const userId = session.user.id
+  const canManage = await prisma.organizationMember.findFirst({ where: { organizationId: orgId, userId } })
+    || await prisma.organizationJoinRequest.findFirst({ where: { organizationId: orgId, userId, status: "APPROVED" } })
+  if (!canManage) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
@@ -34,6 +44,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
   const body = (await req.json().catch(() => null)) as {
     orgId?: string
     profile?: {
@@ -57,6 +70,12 @@ export async function PUT(req: NextRequest) {
   const orgId = body?.orgId
   const profile = body?.profile
   if (!orgId || !profile) return NextResponse.json({ error: "Missing orgId or profile" }, { status: 400 })
+
+  // Authorization: user must be a member of this org OR have an approved join request
+  const userId = session.user.id
+  const canManage = await prisma.organizationMember.findFirst({ where: { organizationId: orgId, userId } })
+    || await prisma.organizationJoinRequest.findFirst({ where: { organizationId: orgId, userId, status: "APPROVED" } })
+  if (!canManage) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   await prisma.$transaction(async (tx) => {
     await tx.organization.update({

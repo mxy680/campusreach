@@ -130,15 +130,19 @@ export default function Page() {
     })
   }
 
-  // Load orgId and profile
+  // Load orgId and profile (secured to only orgs current user can manage)
   React.useEffect(() => {
     ;(async () => {
       try {
-        const r1 = await fetch("/api/orgs")
+        const r1 = await fetch("/api/orgs/mine")
         if (!r1.ok) return
         const j1 = await r1.json()
         const first = (j1?.data ?? [])[0]?.id as string | undefined
-        if (!first) return
+        if (!first) {
+          setOrgId(null)
+          setLoading(false)
+          return
+        }
         setOrgId(first)
         const r2 = await fetch(`/api/org/profile?orgId=${encodeURIComponent(first)}`)
         if (!r2.ok) return
