@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
-// Load volunteer profile by user email
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const email = searchParams.get("email")
-  if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 })
+// Load volunteer profile for the current authenticated user
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { id: session.user.id },
     select: {
       id: true,
       name: true,
@@ -55,12 +56,13 @@ export async function GET(req: NextRequest) {
   })
 }
 
-// Create/update volunteer profile by email
+// Create/update volunteer profile for the current authenticated user
 export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  const { email, profile } = body as {
-    email?: string
+  const { profile } = body as {
     profile?: {
       firstName: string
       lastName: string
@@ -73,9 +75,9 @@ export async function PUT(req: NextRequest) {
       transportNotes?: string
     }
   }
-  if (!email || !profile) return NextResponse.json({ error: "Missing email or profile" }, { status: 400 })
+  if (!profile) return NextResponse.json({ error: "Missing profile" }, { status: 400 })
 
-  const user = await prisma.user.findUnique({ where: { email }, select: { id: true, volunteer: { select: { id: true, slug: true } } } })
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, volunteer: { select: { id: true, slug: true } } } })
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
   const gradYearNum = profile.gradYear ? Number(profile.gradYear) : undefined
