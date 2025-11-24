@@ -8,7 +8,8 @@
     "build": "pnpm prisma:generate && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "extract-volunteers": "tsx scripts/extract-event-volunteers.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

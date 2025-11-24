@@ -133,10 +133,12 @@ export default function OrgSignupClient() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={open}
-                      className="w-full justify-between"
+                      className="w-full justify-between overflow-hidden"
                       onClick={() => setOpen(!open)}
                     >
-                      {selectedOrg ? selectedOrg.name : "Select organization..."}
+                      <span className="flex-1 min-w-0 truncate text-left">
+                        {selectedOrg ? selectedOrg.name : "Select organization..."}
+                      </span>
                       <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -158,11 +160,11 @@ export default function OrgSignupClient() {
                         <button
                           key={o.id}
                           type="button"
-                          className="flex w-full cursor-pointer items-center px-3 py-2 text-left hover:bg-accent"
+                          className="flex w-full cursor-pointer items-center px-3 py-2 text-left hover:bg-accent overflow-hidden"
                           onMouseDown={(e) => { e.preventDefault(); setSelectedOrg(o); setQuery(""); setOpen(false); }}
                         >
                           <CheckIcon className={`mr-2 h-4 w-4 ${selectedOrg?.id === o.id ? "opacity-100" : "opacity-0"}`} />
-                          {o.name}
+                          <span className="flex-1 min-w-0 truncate">{o.name}</span>
                         </button>
                       ))}
                     </div>

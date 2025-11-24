@@ -129,8 +129,33 @@ export async function POST(req: Request) {
     const timeCommitmentHoursRaw = String(form.get("timeCommitmentHours") || "").trim();
     const timeCommitmentHours = timeCommitmentHoursRaw ? Number(timeCommitmentHoursRaw) : null;
 
-    if (!title || !startsAtStr || !volunteersNeeded) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    // Input validation
+    if (!title || title.length === 0) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    }
+    if (title.length > 200) {
+      return NextResponse.json({ error: "Title must be 200 characters or less" }, { status: 400 });
+    }
+    if (!startsAtStr) {
+      return NextResponse.json({ error: "Start date/time is required" }, { status: 400 });
+    }
+    if (!Number.isInteger(volunteersNeeded) || volunteersNeeded < 1 || volunteersNeeded > 10000) {
+      return NextResponse.json(
+        { error: "Volunteers needed must be a positive integer between 1 and 10000" },
+        { status: 400 }
+      );
+    }
+    if (timeCommitmentHours !== null && (!Number.isFinite(timeCommitmentHours) || timeCommitmentHours < 0 || timeCommitmentHours > 1000)) {
+      return NextResponse.json(
+        { error: "Time commitment hours must be a number between 0 and 1000" },
+        { status: 400 }
+      );
+    }
+    if (shortDescription && shortDescription.length > 5000) {
+      return NextResponse.json({ error: "Description must be 5000 characters or less" }, { status: 400 });
+    }
+    if (notes && notes.length > 5000) {
+      return NextResponse.json({ error: "Notes must be 5000 characters or less" }, { status: 400 });
     }
 
     let startsAt: Date;
@@ -144,7 +169,12 @@ export async function POST(req: Request) {
     let specialties: string[] = [];
     try {
       const parsed = JSON.parse(specialtiesJson);
-      if (Array.isArray(parsed)) specialties = parsed.map((s) => String(s));
+      if (Array.isArray(parsed)) {
+        specialties = parsed
+          .map((s) => String(s).trim())
+          .filter((s) => s.length > 0 && s.length <= 100)
+          .slice(0, 50); // Limit to 50 specialties max
+      }
     } catch {
       // ignore, keep default []
     }
@@ -233,7 +263,13 @@ export async function GET() {
       }
     }
 
-    const where = organizationId ? { organizationId } : {};
+    // Security: If user cannot be associated with any organization, return empty results
+    // This prevents organization users from seeing all events when not properly associated
+    if (!organizationId) {
+      return NextResponse.json([]);
+    }
+
+    const where = { organizationId };
     type EventRow = {
       id: string;
       title: string;
@@ -310,8 +346,33 @@ export async function PUT(req: Request) {
     const timeCommitmentHoursRaw = String(form.get("timeCommitmentHours") || "").trim()
     const timeCommitmentHours = timeCommitmentHoursRaw ? Number(timeCommitmentHoursRaw) : null
 
-    if (!title || !startsAtStr || !volunteersNeeded) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    // Input validation
+    if (!title || title.length === 0) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 })
+    }
+    if (title.length > 200) {
+      return NextResponse.json({ error: "Title must be 200 characters or less" }, { status: 400 })
+    }
+    if (!startsAtStr) {
+      return NextResponse.json({ error: "Start date/time is required" }, { status: 400 })
+    }
+    if (!Number.isInteger(volunteersNeeded) || volunteersNeeded < 1 || volunteersNeeded > 10000) {
+      return NextResponse.json(
+        { error: "Volunteers needed must be a positive integer between 1 and 10000" },
+        { status: 400 }
+      )
+    }
+    if (timeCommitmentHours !== null && (!Number.isFinite(timeCommitmentHours) || timeCommitmentHours < 0 || timeCommitmentHours > 1000)) {
+      return NextResponse.json(
+        { error: "Time commitment hours must be a number between 0 and 1000" },
+        { status: 400 }
+      )
+    }
+    if (shortDescription && shortDescription.length > 5000) {
+      return NextResponse.json({ error: "Description must be 5000 characters or less" }, { status: 400 })
+    }
+    if (notes && notes.length > 5000) {
+      return NextResponse.json({ error: "Notes must be 5000 characters or less" }, { status: 400 })
     }
 
     let startsAt: Date
@@ -325,7 +386,12 @@ export async function PUT(req: Request) {
     let specialties: string[] = []
     try {
       const parsed = JSON.parse(specialtiesJson)
-      if (Array.isArray(parsed)) specialties = parsed.map((s) => String(s))
+      if (Array.isArray(parsed)) {
+        specialties = parsed
+          .map((s) => String(s).trim())
+          .filter((s) => s.length > 0 && s.length <= 100)
+          .slice(0, 50) // Limit to 50 specialties max
+      }
     } catch {
       // keep []
     }

@@ -64,6 +64,23 @@ export async function PUT(req: Request) {
   const defaultVolunteersNeeded = body?.defaultVolunteersNeeded as number | undefined
   if (!name) return NextResponse.json({ error: "Missing name" }, { status: 400 })
 
+  // Input validation for numeric fields
+  if (defaultTimeCommitmentHours !== undefined && (!Number.isFinite(defaultTimeCommitmentHours) || defaultTimeCommitmentHours < 0 || defaultTimeCommitmentHours > 1000)) {
+    return NextResponse.json({ error: "Default time commitment hours must be between 0 and 1000" }, { status: 400 })
+  }
+  if (defaultVolunteersNeeded !== undefined && (!Number.isInteger(defaultVolunteersNeeded) || defaultVolunteersNeeded < 1 || defaultVolunteersNeeded > 10000)) {
+    return NextResponse.json({ error: "Default volunteers needed must be an integer between 1 and 10000" }, { status: 400 })
+  }
+  if (name.length > 200) {
+    return NextResponse.json({ error: "Organization name must be 200 characters or less" }, { status: 400 })
+  }
+  if (contactEmail && contactEmail.length > 255) {
+    return NextResponse.json({ error: "Contact email must be 255 characters or less" }, { status: 400 })
+  }
+  if (defaultEventLocationTemplate && defaultEventLocationTemplate.length > 500) {
+    return NextResponse.json({ error: "Default location template must be 500 characters or less" }, { status: 400 })
+  }
+
   // Owner-only: resolve org by matching user's email to org.email or org.contactEmail
   const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } })
   if (!user?.email) return NextResponse.json({ error: "Organization not found" }, { status: 404 })

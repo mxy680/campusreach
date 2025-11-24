@@ -120,8 +120,10 @@ export async function middleware(req: NextRequest) {
     if (profileComplete && pathname.startsWith(USER_SIGNUP_PREFIX)) {
       return redirect(USER_DASHBOARD_PATH);
     }
-    // Volunteers should not access org dashboard
-    if (onOrgDashboard) return redirect(USER_DASHBOARD_PATH);
+    // Volunteers should not access any org routes (except signup flow)
+    if (pathname.startsWith("/org") && !pathname.startsWith(ORG_SIGNUP_PREFIX) && !onOrgProfile && !onOrgStart) {
+      return redirect(USER_DASHBOARD_PATH);
+    }
     // Volunteers must complete profile before accessing their dashboard
     if (!profileComplete && onUserDashboard) return redirect(PROFILE_PATH);
     // Always allow volunteer signup flow pages regardless of completion state

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useParams } from "next/navigation"
+import { useParams, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
@@ -64,10 +64,15 @@ function useEventChat(eventId: string | undefined) {
 
 export default function OrgEventChatPage() {
   const params = useParams<{ id: string }>()
+  const pathname = usePathname()
   const eventId = params?.id
   const { messages, resetAndRefetch } = useEventChat(eventId)
   const [text, setText] = React.useState("")
   // Simple composer (no announcement toggle on this view)
+
+  // Determine if we're on the user side or org side based on the pathname
+  const isUserRoute = pathname?.startsWith("/user/messaging")
+  const messagingLink = isUserRoute ? "/user/messaging" : "/org/messaging"
 
   async function send() {
     if (!eventId || !text.trim()) return
@@ -92,7 +97,7 @@ export default function OrgEventChatPage() {
     <main className="flex h-[calc(100dvh-60px)] flex-col p-4 md:p-6">
       <div className="mb-3 flex items-center justify-between">
         <Button asChild variant="outline" size="sm">
-          <Link href="/org/messaging">View all group chats</Link>
+          <Link href={messagingLink}>View all group chats</Link>
         </Button>
       </div>
       <Card className="flex min-h-0 flex-1 flex-col">

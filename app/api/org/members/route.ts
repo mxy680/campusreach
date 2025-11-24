@@ -81,6 +81,7 @@ export async function DELETE(req: Request) {
 }
 // POST /api/org/members { orgId }
 // Links the CURRENT signed-in user as a member of orgId
+// Authorization: user must have an approved join request OR be the org owner (email match)
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
@@ -88,6 +89,33 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({})) as { orgId?: string }
     const orgId = body.orgId
     if (!orgId) return NextResponse.json({ error: "Missing orgId" }, { status: 400 })
+
+    // Verify organization exists
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { id: true, email: true, contactEmail: true },
+    })
+    if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+
+    // Authorization: user must have approved join request OR be owner by email
+    const [user, approvedRequest] = await Promise.all([
+      prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } }),
+      prisma.organizationJoinRequest.findFirst({
+        where: { organizationId: orgId, userId: session.user.id, status: "APPROVED" },
+        select: { id: true },
+      }),
+    ])
+
+    const isOwnerByEmail = !!(
+      user?.email && (org.email === user.email || org.contactEmail === user.email)
+    )
+
+    if (!approvedRequest && !isOwnerByEmail) {
+      return NextResponse.json(
+        { error: "Forbidden: You must have an approved join request or be the organization owner" },
+        { status: 403 }
+      )
+    }
 
     // Upsert membership
     await prisma.organizationMember.upsert({

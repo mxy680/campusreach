@@ -15,8 +15,42 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing eventId or volunteerId" }, { status: 400 })
     }
 
+    // Verify event exists and get organization
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { organizationId: true },
+    })
+    if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 })
+
+    // Authorization: verify user can manage this event's organization
+    if (event.organizationId) {
+      const isMember = await prisma.organizationMember.findFirst({
+        where: { organizationId: event.organizationId, userId: session.user.id },
+        select: { id: true },
+      })
+      if (!isMember) {
+        // Fallback: check if user's email matches org email/contactEmail
+        const [user, org] = await Promise.all([
+          prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } }),
+          prisma.organization.findUnique({
+            where: { id: event.organizationId },
+            select: { email: true, contactEmail: true },
+          }),
+        ])
+        const isOwnerByEmail = !!(
+          user?.email && org && (org.email === user.email || org.contactEmail === user.email)
+        )
+        if (!isOwnerByEmail) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+      }
+    } else {
+      // Events without organizationId should not be manageable via this endpoint
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
     await prisma.eventSignup.delete({
-      where: { eventId_volunteerId: {eventId, volunteerId } },
+      where: { eventId_volunteerId: { eventId, volunteerId } },
     })
 
     return NextResponse.json({ ok: true })
@@ -33,6 +67,40 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const eventId = searchParams.get("eventId")
   if (!eventId) return NextResponse.json({ error: "Missing eventId" }, { status: 400 })
+
+  // Verify event exists and get organization
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { organizationId: true },
+  })
+  if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 })
+
+  // Authorization: verify user can manage this event's organization
+  if (event.organizationId) {
+    const isMember = await prisma.organizationMember.findFirst({
+      where: { organizationId: event.organizationId, userId: session.user.id },
+      select: { id: true },
+    })
+    if (!isMember) {
+      // Fallback: check if user's email matches org email/contactEmail
+      const [user, org] = await Promise.all([
+        prisma.user.findUnique({ where: { id: session.user.id }, select: { email: true } }),
+        prisma.organization.findUnique({
+          where: { id: event.organizationId },
+          select: { email: true, contactEmail: true },
+        }),
+      ])
+      const isOwnerByEmail = !!(
+        user?.email && org && (org.email === user.email || org.contactEmail === user.email)
+      )
+      if (!isOwnerByEmail) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+    }
+  } else {
+    // Events without organizationId should not be accessible via this endpoint
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const signups = await prisma.eventSignup.findMany({
     where: { eventId },

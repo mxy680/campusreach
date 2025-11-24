@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
   const { searchParams } = new URL(req.url)
   const email = searchParams.get("email")
   if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 })
+
+  // Security: Verify the requested email belongs to the authenticated user
+  const authenticatedUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { email: true },
+  })
+  if (!authenticatedUser || authenticatedUser.email !== email) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const user = await prisma.user.findUnique({
     where: { email },

@@ -20,7 +20,13 @@ export async function GET() {
     }
   }
 
-  const where = orgId ? { organizationId: orgId } : {}
+  // Security: If user cannot be associated with any organization, return empty results
+  // This prevents organization users from seeing all events when not properly associated
+  if (!orgId) {
+    return NextResponse.json({ data: [] })
+  }
+
+  const where = { organizationId: orgId }
   const events: Array<{ id: string; title: string }> = await prisma.event.findMany({
     where,
     orderBy: { startsAt: "asc" },
