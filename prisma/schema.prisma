@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Volunteers - linked to Supabase Auth users via email
+model Volunteer {
+  id     String @id @default(cuid())
+  userId String @unique // Supabase auth.users.id (UUID)
+  email  String? @unique // Supabase auth.users.email (temporarily optional for migration)
+
+  // Public profile
+  slug String? @unique
+
+  // Profile fields
+  firstName      String
+  lastName       String
+  name           String? // Full name from Supabase
+  image          String? // Avatar URL from Supabase
+  pronouns       String?
+  school         String?
+  major          String?
+  graduationDate DateTime?
+  phone          String?
+
+  // Transportation preferences
+  transportMode  TransportMode?
+  radiusMiles    Int?
+  transportNotes String?
+
+  // Goals
+  weeklyGoalHours Int?
+
+  // Relations
+  signups     EventSignup[]
+  timeEntries TimeEntry[]
+  ratings     EventRating[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Organizations - can have multiple members (users)
+model Organization {
+  id       String  @id @default(cuid())
+  name     String?
+  slug     String? @unique
+  email    String?
+  industry String?
+
+  // Profile fields
+  logoUrl                      String?
+  description                  String?
+  mission                      String?
+  contactName                  String?
+  contactEmail                 String?
+  contactPhone                 String?
+  categories                   String[]
+  twitter                      String?
+  instagram                    String?
+  facebook                     String?
+  linkedin                     String?
+  // Preferences
+  timezone                     String? // e.g., "America/New_York"
+  locale                       String? // e.g., "en-US"
+  defaultEventLocationTemplate String?
+  defaultTimeCommitmentHours   Int?
+  defaultVolunteersNeeded      Int?
+
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  /// Events hosted by this organization
+  events    Event[]
+  /// Members (Supabase auth users) that can manage this organization
+  members   OrganizationMember[]
+  /// Pending/approved/declined join requests
+  joinRequests OrganizationJoinRequest[]
+  /// Additional contacts
+  contacts OrganizationContact[]
+  /// Signup intents that target this organization
+  signupIntents SignupIntent[]
+}
+
+/// Links Supabase auth users to Organizations for membership/admin access
+model OrganizationMember {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String // Supabase auth.users.id (UUID)
+  email          String? // Supabase auth.users.email (temporarily optional for migration)
+  name           String? // User's name from Google account
+  logoUrl        String? // User's avatar/logo URL from Google account
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+/// Additional contacts for organizations
+model OrganizationContact {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  role           String?
+  createdAt      DateTime     @default(now())
+}
+
+/// Events created by organizations
+model Event {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  // Core fields
+  title               String
+  shortDescription    String?
+  startsAt            DateTime
+  endsAt              DateTime?
+  location            String    @default("TBD")
+  volunteersNeeded    Int
+  notes               String?
+  timeCommitmentHours Int?
+
+  // Optional, stored as scalar lists
+  attachments String[] // e.g. URLs to uploaded files
+  specialties String[] // desired specialties/majors
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  // Signups
+  signups     EventSignup[]
+  timeEntries TimeEntry[]
+  /// Group chat for this event (one chat per event)
+  groupChat   GroupChat?
+  /// Backref for legacy messages during migration
+  messages    ChatMessage[]
+  ratings     EventRating[]
+}
+
+/// A volunteer signing up for an event
+model EventSignup {
+  id            String       @id @default(cuid())
+  eventId       String
+  volunteerId   String
+  status        SignupStatus @default(CONFIRMED)
+  hoursVerified Boolean      @default(false) // Organization verification of volunteer hours
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, volunteerId])
+}
+
+/// Rating given by a volunteer to an event (after it is over)
+model EventRating {
+  id          String   @id @default(cuid())
+  eventId     String
+  volunteerId String
+  rating      Int /// 1-5
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, volunteerId])
+  @@index([eventId])
+  @@index([volunteerId])
+}
+
+/// Logged hours for a volunteer (optionally tied to an event)
+model TimeEntry {
+  id          String   @id @default(cuid())
+  volunteerId String
+  eventId     String?
+  date        DateTime // when the volunteering occurred
+  hours       Decimal // number of hours (e.g., 1.5)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  event     Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([volunteerId, date])
+}
+
+/// One group chat per event
+model GroupChat {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  createdAt DateTime @default(now())
+
+  event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+}
+
+/// Group chat messages
+model ChatMessage {
+  id          String            @id @default(cuid())
+  groupChatId String?
+  eventId     String?
+  userId      String? // Supabase auth.users.id (UUID)
+  authorType  MessageAuthorType @default(USER)
+  kind        ChatMessageKind   @default(MESSAGE)
+  body        String
+  createdAt   DateTime          @default(now())
+
+  groupChat GroupChat? @relation(fields: [groupChatId], references: [id], onDelete: Cascade)
+  event     Event?     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([groupChatId, createdAt])
+  @@index([eventId, createdAt])
+}
+
+/// A user's request to join an existing organization
+model OrganizationJoinRequest {
+  id             String     @id @default(cuid())
+  organizationId String
+  userId         String // Supabase auth.users.id (UUID)
+  email          String? // Supabase auth.users.email (temporarily optional for migration)
+  status         JoinStatus @default(PENDING)
+  message        String?
+  createdAt      DateTime   @default(now())
+  decidedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, status])
+  @@index([organizationId, status, createdAt])
+}
+
+/// Short-lived state to persist signup intent across OAuth redirects
+model SignupIntent {
+  id             String            @id @default(cuid())
+  token          String            @unique
+  kind           SignupIntentKind
+  organizationId String?
+  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?           // existing user initiating the flow (optional)
+  email          String?           // prefilled or expected email (optional)
+  metadata       Json?             // extra context if needed
+  createdAt      DateTime          @default(now())
+  expiresAt      DateTime
+  usedAt         DateTime?
+
+  @@index([organizationId, kind])
+  @@index([email, kind])
+}
+
+/// Per-user notification preferences
+model NotificationPreference {
+  userId       String  @id // Supabase auth.users.id (UUID)
+  email        String? @unique // Supabase auth.users.email (temporarily optional for migration)
+  emailUpdates Boolean @default(true)
+  pushEnabled  Boolean @default(false)
+  weeklyDigest Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Enums
+
+enum TransportMode {
+  PROVIDE_OTHERS /// can provide rides for self and others (carpool)
+  SELF_ONLY /// can drive self only
+  RIDESHARE /// accept CampusReach-provided rideshare
+}
+
+enum SignupStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum JoinStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+enum SignupIntentKind {
+  ORG_CREATE
+  ORG_JOIN
+  USER_SIGNUP
+}
+
+enum ChatMessageKind {
+  MESSAGE /// regular user/org message
+  ANNOUNCEMENT /// organization announcement
+}
+
+enum MessageAuthorType {
+  USER
+  SYSTEM
+}
