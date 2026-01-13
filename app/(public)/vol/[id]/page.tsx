@@ -10,7 +10,6 @@ import {
   IconCalendar,
   IconClock,
   IconMapPin,
-  IconUsers,
   IconHeartHandshake,
   IconBuilding,
   IconArrowLeft,
@@ -58,21 +57,6 @@ type VolunteerData = {
       } | null
     }
     createdAt: string
-  }>
-  recentTimeEntries: Array<{
-    id: string
-    event: {
-      id: string
-      title: string
-      organization: {
-        id: string
-        name: string | null
-        logoUrl: string | null
-      } | null
-    } | null
-    date: string
-    hours: number
-    notes: string | null
   }>
   recentRatings: Array<{
     id: string
@@ -171,7 +155,7 @@ export default function PublicVolunteerProfile() {
     )
   }
 
-  const { volunteer, stats, recentSignups, recentTimeEntries, monthlyHours } = data
+  const { volunteer, stats, recentSignups, monthlyHours } = data
 
   const displayName = volunteer.name || `${volunteer.firstName} ${volunteer.lastName}`
 
@@ -372,86 +356,14 @@ export default function PublicVolunteerProfile() {
               </Card>
             )}
 
-            {/* Recent Hours Logged */}
-            {recentTimeEntries.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Hours Logged</CardTitle>
-                  <CardDescription>
-                    Time entries and volunteer hours
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentTimeEntries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            {entry.event ? (
-                              <>
-                                <div className="flex items-center gap-3 mb-2">
-                                  {entry.event.organization?.logoUrl && (
-                                    <Avatar className="h-8 w-8 shrink-0">
-                                      <AvatarImage
-                                        src={entry.event.organization.logoUrl}
-                                        alt={entry.event.organization.name || "Organization"}
-                                      />
-                                      <AvatarFallback>
-                                        {entry.event.organization.name?.[0]?.toUpperCase() || "O"}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                  )}
-                                  <div>
-                                    <h3 className="font-semibold">{entry.event.title}</h3>
-                                    {entry.event.organization?.name && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {entry.event.organization.name}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </>
-                            ) : (
-                              <h3 className="font-semibold mb-2">General Volunteering</h3>
-                            )}
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1.5">
-                                <IconCalendar className="h-4 w-4" />
-                                <span>{formatDate(entry.date)}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <IconClock className="h-4 w-4" />
-                                <span className="font-medium text-foreground">
-                                  {formatHours(entry.hours)}
-                                </span>
-                              </div>
-                            </div>
-                            {entry.notes && (
-                              <p className="text-sm text-muted-foreground mt-2 italic">
-                                "{entry.notes}"
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Empty State */}
-            {recentSignups.length === 0 &&
-              recentTimeEntries.length === 0 && (
+            {recentSignups.length === 0 && (
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center py-12">
                       <IconHeartHandshake className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                       <p className="text-muted-foreground">
-                        {displayName} hasn't participated in any events yet.
+                        {displayName} hasn&apos;t participated in any events yet.
                       </p>
                     </div>
                   </CardContent>

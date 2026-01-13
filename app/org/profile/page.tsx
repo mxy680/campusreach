@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { IconUpload, IconDeviceFloppy, IconTrash, IconUserCircle, IconExternalLink } from "@tabler/icons-react"
+import { IconUpload, IconDeviceFloppy, IconTrash, IconUserCircle, IconExternalLink, IconUsers, IconBuilding } from "@tabler/icons-react"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -50,10 +50,10 @@ export default function OrganizationProfile() {
   const [uploading, setUploading] = useState(false)
   const [orgId, setOrgId] = useState<string | null>(null)
   const [orgName, setOrgName] = useState("")
+  const [orgType, setOrgType] = useState<"STUDENT" | "COMMUNITY" | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [description, setDescription] = useState("")
-  const [mission, setMission] = useState("")
   const [contactName, setContactName] = useState("")
   const [contactEmail, setContactEmail] = useState("")
   const [contactPhone, setContactPhone] = useState("")
@@ -76,8 +76,8 @@ export default function OrganizationProfile() {
         if (org) {
           setOrgId(org.id || null)
           setOrgName(org.name || "")
+          setOrgType(org.type || null)
           setDescription(org.description || "")
-          setMission(org.mission || "")
           setSelectedCategories(org.categories || [])
           setContactName(org.contactName || "")
           setContactEmail(org.contactEmail || "")
@@ -137,8 +137,8 @@ export default function OrganizationProfile() {
         },
         body: JSON.stringify({
           name: orgName,
+          type: orgType,
           description,
-          mission,
           categories: selectedCategories,
           contactName,
           contactEmail,
@@ -237,6 +237,43 @@ export default function OrganizationProfile() {
                 />
               </div>
 
+              {/* Organization type */}
+              <div className="space-y-2">
+                <Label>Organization type</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setOrgType("STUDENT")}
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-colors ${
+                      orgType === "STUDENT"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <IconUsers className={`h-5 w-5 ${orgType === "STUDENT" ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className="text-left">
+                      <div className={`font-medium ${orgType === "STUDENT" ? "text-primary" : ""}`}>Student</div>
+                      <div className="text-xs text-muted-foreground">Student-run organization</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrgType("COMMUNITY")}
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-colors ${
+                      orgType === "COMMUNITY"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <IconBuilding className={`h-5 w-5 ${orgType === "COMMUNITY" ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className="text-left">
+                      <div className={`font-medium ${orgType === "COMMUNITY" ? "text-primary" : ""}`}>Community</div>
+                      <div className="text-xs text-muted-foreground">Community organization</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Logo */}
               <div className="space-y-2">
                 <Label>Logo</Label>
@@ -326,22 +363,6 @@ export default function OrganizationProfile() {
                 />
                 <div className="text-right text-xs text-muted-foreground">
                   {description.length}/500
-                </div>
-              </div>
-
-              {/* Mission statement */}
-              <div className="space-y-2">
-                <Label htmlFor="mission">Mission statement</Label>
-                <textarea
-                  id="mission"
-                  className="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  placeholder="Your mission and impact goals"
-                  value={mission}
-                  onChange={(e) => setMission(e.target.value)}
-                  maxLength={300}
-                />
-                <div className="text-right text-xs text-muted-foreground">
-                  {mission.length}/300
                 </div>
               </div>
 

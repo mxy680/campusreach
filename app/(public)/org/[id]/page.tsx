@@ -15,9 +15,9 @@ type OrganizationData = {
     id: string
     name: string | null
     slug: string | null
+    type: "STUDENT" | "COMMUNITY" | null
     logoUrl: string | null
     description: string | null
-    mission: string | null
     categories: string[]
     contactName: string | null
     contactEmail: string | null
@@ -153,16 +153,23 @@ export default function PublicOrganizationProfile() {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold mb-2">
-                {organization.name || "Organization"}
-              </h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl sm:text-4xl font-bold">
+                  {organization.name || "Organization"}
+                </h1>
+                {organization.type && (
+                  <Badge variant={organization.type === "STUDENT" ? "default" : "secondary"}>
+                    {organization.type === "STUDENT" ? "Student Organization" : "Community Organization"}
+                  </Badge>
+                )}
+              </div>
               {organization.industry && (
                 <p className="text-muted-foreground mb-3">{organization.industry}</p>
               )}
               {organization.categories.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {organization.categories.map((category) => (
-                    <Badge key={category} variant="secondary">
+                    <Badge key={category} variant="outline">
                       {category}
                     </Badge>
                   ))}
@@ -226,18 +233,6 @@ export default function PublicOrganizationProfile() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Mission */}
-            {organization.mission && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Mission</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground whitespace-pre-wrap">{organization.mission}</p>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Upcoming Events */}
             <Card>

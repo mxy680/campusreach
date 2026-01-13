@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { IconSearch, IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight, IconTrash, IconCheck } from "@tabler/icons-react"
+import { IconSearch, IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight, IconTrash } from "@tabler/icons-react"
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"

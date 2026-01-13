@@ -1,6 +1,7 @@
-import { createClient } from "@/lib/supabase/server"
+import { createServerClient } from "@supabase/ssr"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { cookies } from "next/headers"
 
 // Map from URL school identifier to full school name
 const SCHOOL_NAME_MAP: Record<string, string> = {
@@ -14,10 +15,44 @@ export async function GET(request: Request) {
   const signupType = requestUrl.searchParams.get("type")
   const schoolParam = requestUrl.searchParams.get("school")
   const organizationId = requestUrl.searchParams.get("organizationId")
-  const supabase = await createClient()
+
+  const cookieStore = await cookies()
+
+  // Track cookies to set on redirect response
+  const cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[] = []
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookies) {
+          cookies.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+            cookiesToSet.push({ name, value, options })
+          })
+        },
+      },
+    }
+  )
+
+  // Helper to create redirect with cookies
+  const redirectWithCookies = (url: URL) => {
+    const response = NextResponse.redirect(url)
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
+    })
+    return response
+  }
 
   if (code) {
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+    if (exchangeError) {
+      console.error("Exchange error:", exchangeError)
+    }
   }
 
   const {
@@ -25,8 +60,10 @@ export async function GET(request: Request) {
     error: authError,
   } = await supabase.auth.getUser()
 
+  console.log("Callback - user:", user?.email, "authError:", authError?.message, "cookies:", cookiesToSet.length)
+
   if (authError || !user) {
-    return NextResponse.redirect(new URL("/auth/signin", requestUrl.origin))
+    return redirectWithCookies(new URL("/auth/signin", requestUrl.origin))
   }
 
   // Handle sign in (no type parameter means existing user signing in)
@@ -42,7 +79,7 @@ export async function GET(request: Request) {
 
     if (volunteer) {
       // User is a volunteer, redirect to volunteer dashboard
-      return NextResponse.redirect(new URL("/vol", requestUrl.origin))
+      return redirectWithCookies(new URL("/vol", requestUrl.origin))
     } else if (orgMember) {
       // User is an organization member, update logoUrl if missing
       const logoUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null
@@ -53,10 +90,10 @@ export async function GET(request: Request) {
         })
       }
       // Redirect to org dashboard
-      return NextResponse.redirect(new URL("/org", requestUrl.origin))
+      return redirectWithCookies(new URL("/org", requestUrl.origin))
     } else {
       // User doesn't exist, redirect to signin with error
-      return NextResponse.redirect(
+      return redirectWithCookies(
         new URL("/auth/signin?error=no_account", requestUrl.origin)
       )
     }
@@ -76,7 +113,7 @@ export async function GET(request: Request) {
 
     if (existingVolunteer) {
       // Email/userId already associated with a volunteer account
-      return NextResponse.redirect(
+      return redirectWithCookies(
         new URL("/auth/signup/volunteer?error=email_exists", requestUrl.origin)
       )
     }
@@ -96,7 +133,7 @@ export async function GET(request: Request) {
         })
       }
       // Redirect to org dashboard
-      return NextResponse.redirect(new URL("/org", requestUrl.origin))
+      return redirectWithCookies(new URL("/org", requestUrl.origin))
     }
 
     // Create new organization and link user as member
@@ -167,13 +204,13 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.redirect(new URL("/org", requestUrl.origin))
+    return redirectWithCookies(new URL("/org", requestUrl.origin))
   }
 
   // Handle organization join request
   if (signupType === "org-join") {
     if (!organizationId) {
-      return NextResponse.redirect(
+      return redirectWithCookies(
         new URL("/auth/signup/organization?error=missing_organization", requestUrl.origin)
       )
     }
@@ -184,7 +221,7 @@ export async function GET(request: Request) {
     })
 
     if (!organization) {
-      return NextResponse.redirect(
+      return redirectWithCookies(
         new URL("/auth/signup/organization?error=organization_not_found", requestUrl.origin)
       )
     }
@@ -199,7 +236,7 @@ export async function GET(request: Request) {
 
     if (existingMember) {
       // User is already a member, redirect to org dashboard
-      return NextResponse.redirect(new URL("/org", requestUrl.origin))
+      return redirectWithCookies(new URL("/org", requestUrl.origin))
     }
 
     // Check if there's already a pending join request
@@ -213,7 +250,7 @@ export async function GET(request: Request) {
 
     if (existingRequest) {
       // Join request already exists, redirect with success message
-      return NextResponse.redirect(
+      return redirectWithCookies(
         new URL("/auth/signup/organization?success=join_request_sent", requestUrl.origin)
       )
     }
@@ -230,12 +267,12 @@ export async function GET(request: Request) {
       })
 
       // Redirect with success message
-      return NextResponse.redirect(
+      return redirectWithCookies(
         new URL("/auth/signup/organization?success=join_request_sent", requestUrl.origin)
       )
     } catch (error) {
       console.error("Error creating join request:", error)
-      return NextResponse.redirect(
+      return redirectWithCookies(
         new URL("/auth/signup/organization?error=join_request_failed", requestUrl.origin)
       )
     }
@@ -254,7 +291,7 @@ export async function GET(request: Request) {
 
   if (existingOrgMember) {
     // Email/userId already associated with an organization account
-    return NextResponse.redirect(
+    return redirectWithCookies(
       new URL("/auth/signup/organization?error=email_exists", requestUrl.origin)
     )
   }
@@ -266,7 +303,7 @@ export async function GET(request: Request) {
 
   if (!isValidDomain) {
     // Email domain not allowed for volunteer signup
-    return NextResponse.redirect(
+    return redirectWithCookies(
       new URL("/auth/signup/volunteer?error=invalid_domain", requestUrl.origin)
     )
   }
@@ -284,7 +321,7 @@ export async function GET(request: Request) {
 
     if (existingVolunteerByEmail) {
       // Email already associated with a volunteer account
-      return NextResponse.redirect(
+      return redirectWithCookies(
         new URL("/auth/signup/volunteer?error=email_exists", requestUrl.origin)
       )
     }
@@ -322,7 +359,7 @@ export async function GET(request: Request) {
 
       if (!isValidDomain) {
         // Email domain not allowed for volunteer account
-        return NextResponse.redirect(
+        return redirectWithCookies(
           new URL("/auth/signup/volunteer?error=invalid_domain", requestUrl.origin)
         )
       }
@@ -334,6 +371,6 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL("/vol", requestUrl.origin))
+  return redirectWithCookies(new URL("/vol", requestUrl.origin))
 }
 

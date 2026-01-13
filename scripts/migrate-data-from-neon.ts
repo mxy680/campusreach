@@ -138,7 +138,7 @@ async function getTableInfo(pool: Pool, tableName: string): Promise<TableInfo | 
 async function compareSchemas() {
   log('\n📊 Comparing schemas between Neon and Supabase...', 'cyan');
 
-  const differences: string[] = [];
+  const schemaDifferences: string[] = [];
   const neonTables: TableInfo[] = [];
   const supabaseTables: TableInfo[] = [];
 
@@ -150,9 +150,9 @@ async function compareSchemas() {
     if (supabaseInfo) supabaseTables.push(supabaseInfo);
 
     if (neonInfo && !supabaseInfo) {
-      differences.push(`Table "${tableName}" exists in Neon but not in Supabase`);
+      schemaDifferences.push(`Table "${tableName}" exists in Neon but not in Supabase`);
     } else if (!neonInfo && supabaseInfo) {
-      differences.push(`Table "${tableName}" exists in Supabase but not in Neon`);
+      schemaDifferences.push(`Table "${tableName}" exists in Supabase but not in Neon`);
     } else if (neonInfo && supabaseInfo) {
       const neonCols = new Set(neonInfo.columns);
       const supabaseCols = new Set(supabaseInfo.columns);
@@ -161,12 +161,12 @@ async function compareSchemas() {
       const missingInNeon = supabaseInfo.columns.filter((col) => !neonCols.has(col));
 
       if (missingInSupabase.length > 0) {
-        differences.push(
+        schemaDifferences.push(
           `Table "${tableName}": Columns in Neon but not Supabase: ${missingInSupabase.join(', ')}`
         );
       }
       if (missingInNeon.length > 0) {
-        differences.push(
+        schemaDifferences.push(
           `Table "${tableName}": Columns in Supabase but not Neon: ${missingInNeon.join(', ')}`
         );
       }
@@ -177,15 +177,15 @@ async function compareSchemas() {
     }
   }
 
-  if (differences.length > 0) {
+  if (schemaDifferences.length > 0) {
     warn('\n⚠️  Schema differences detected:');
-    differences.forEach((diff) => warn(`  - ${diff}`));
+    schemaDifferences.forEach((diff) => warn(`  - ${diff}`));
     warn('\nThe migration will attempt to handle these differences.');
   } else {
     success('Schemas match!');
   }
 
-  return { neonTables, supabaseTables, differences };
+  return { neonTables, supabaseTables };
 }
 
 async function migrateTable(
@@ -235,11 +235,12 @@ async function migrateTable(
         const values = commonColumns.map((col) => row[col]);
         await supabasePool.query(insertQuery, values);
         inserted++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Log error but continue
-        if (err.code !== '23505') {
+        const pgError = err as { code?: string; message?: string };
+        if (pgError.code !== '23505') {
           // 23505 is unique constraint violation (expected with ON CONFLICT DO NOTHING)
-          warn(`  Error inserting row into "${tableName}": ${err.message}`);
+          warn(`  Error inserting row into "${tableName}": ${pgError.message}`);
         }
       }
     }
@@ -280,7 +281,7 @@ async function main() {
     success('Connected to Supabase');
 
     // Compare schemas
-    const { neonTables, supabaseTables, differences } = await compareSchemas();
+    const { neonTables, supabaseTables } = await compareSchemas();
 
     if (neonTables.length === 0) {
       error('No tables found in Neon database');
@@ -333,8 +334,9 @@ async function main() {
     info('  1. Verify your data in Supabase');
     info('  2. Run: pnpm prisma generate');
     info('  3. Test your application');
-  } catch (err: any) {
-    error(`Migration failed: ${err.message}`);
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    error(`Migration failed: ${errorMessage}`);
     console.error(err);
     process.exit(1);
   } finally {

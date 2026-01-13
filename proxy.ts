@@ -7,6 +7,9 @@ export async function proxy(request: NextRequest) {
     request,
   })
 
+  // Track cookies that need to be set on any response (including redirects)
+  const cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[] = []
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -15,18 +18,28 @@ export async function proxy(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        setAll(cookies) {
+          cookies.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookies.forEach(({ name, value, options }) => {
             supabaseResponse.cookies.set(name, value, options)
-          )
+            cookiesToSet.push({ name, value, options })
+          })
         },
       },
     }
   )
+
+  // Helper to create redirect with cookies preserved
+  const redirectWithCookies = (url: URL) => {
+    const response = NextResponse.redirect(url)
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
+    })
+    return response
+  }
 
   // Refresh session if expired - required for Server Components
   const {
@@ -44,7 +57,7 @@ export async function proxy(request: NextRequest) {
   if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/signin'
-    return NextResponse.redirect(url)
+    return redirectWithCookies(url)
   }
 
   // Determine user type
@@ -67,7 +80,7 @@ export async function proxy(request: NextRequest) {
       // User has no account type, redirect to signin
       url.pathname = '/auth/signin'
     }
-    return NextResponse.redirect(url)
+    return redirectWithCookies(url)
   }
 
   // Allow public profile routes - these are accessible to all authenticated users
@@ -105,7 +118,7 @@ export async function proxy(request: NextRequest) {
       } else {
         url.pathname = '/auth/signin'
       }
-      return NextResponse.redirect(url)
+      return redirectWithCookies(url)
     }
     return supabaseResponse
   }
@@ -120,7 +133,7 @@ export async function proxy(request: NextRequest) {
       } else {
         url.pathname = '/auth/signin'
       }
-      return NextResponse.redirect(url)
+      return redirectWithCookies(url)
     }
     return supabaseResponse
   }

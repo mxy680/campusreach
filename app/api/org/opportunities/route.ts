@@ -36,7 +36,6 @@ export async function POST(request: Request) {
       timeCommitment,
       notes,
       skills,
-      attachments,
     } = body
 
     // Validate required fields
@@ -72,7 +71,6 @@ export async function POST(request: Request) {
             : null,
           notes: notes || null,
           specialties: skills || [],
-          attachments: attachments || [],
         },
       })
 

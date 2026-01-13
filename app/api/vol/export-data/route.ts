@@ -27,11 +27,6 @@ export async function GET() {
             },
           },
         },
-        timeEntries: {
-          include: {
-            event: true,
-          },
-        },
         ratings: {
           include: {
             event: true,
@@ -86,18 +81,9 @@ export async function GET() {
         eventTitle: signup.event.title,
         organizationName: signup.event.organization?.name,
         status: signup.status,
+        hoursVerified: signup.hoursVerified,
         createdAt: signup.createdAt,
         updatedAt: signup.updatedAt,
-      })),
-      timeEntries: volunteer.timeEntries.map((entry) => ({
-        id: entry.id,
-        eventId: entry.eventId,
-        eventTitle: entry.event?.title,
-        date: entry.date,
-        hours: entry.hours.toString(),
-        notes: entry.notes,
-        createdAt: entry.createdAt,
-        updatedAt: entry.updatedAt,
       })),
       ratings: volunteer.ratings.map((rating) => ({
         id: rating.id,

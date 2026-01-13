@@ -37,10 +37,6 @@ export async function POST() {
       where: { volunteerId: volunteer.id },
     })
 
-    await prisma.timeEntry.deleteMany({
-      where: { volunteerId: volunteer.id },
-    })
-
     await prisma.eventRating.deleteMany({
       where: { volunteerId: volunteer.id },
     })

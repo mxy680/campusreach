@@ -29,14 +29,12 @@ model Volunteer {
   // Transportation preferences
   transportMode  TransportMode?
   radiusMiles    Int?
-  transportNotes String?
 
   // Goals
   weeklyGoalHours Int?
 
   // Relations
   signups     EventSignup[]
-  timeEntries TimeEntry[]
   ratings     EventRating[]
 
   createdAt DateTime @default(now())
@@ -45,16 +43,16 @@ model Volunteer {
 
 /// Organizations - can have multiple members (users)
 model Organization {
-  id       String  @id @default(cuid())
+  id       String            @id @default(cuid())
   name     String?
-  slug     String? @unique
+  slug     String?           @unique
   email    String?
   industry String?
+  type     OrganizationType?
 
   // Profile fields
   logoUrl                      String?
   description                  String?
-  mission                      String?
   contactName                  String?
   contactEmail                 String?
   contactPhone                 String?
@@ -66,7 +64,6 @@ model Organization {
   // Preferences
   timezone                     String? // e.g., "America/New_York"
   locale                       String? // e.g., "en-US"
-  defaultEventLocationTemplate String?
   defaultTimeCommitmentHours   Int?
   defaultVolunteersNeeded      Int?
 
@@ -80,8 +77,6 @@ model Organization {
   joinRequests OrganizationJoinRequest[]
   /// Additional contacts
   contacts OrganizationContact[]
-  /// Signup intents that target this organization
-  signupIntents SignupIntent[]
 }
 
 /// Links Supabase auth users to Organizations for membership/admin access
@@ -130,14 +125,12 @@ model Event {
   timeCommitmentHours Int?
 
   // Optional, stored as scalar lists
-  attachments String[] // e.g. URLs to uploaded files
   specialties String[] // desired specialties/majors
 
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   // Signups
   signups     EventSignup[]
-  timeEntries TimeEntry[]
   /// Group chat for this event (one chat per event)
   groupChat   GroupChat?
   /// Backref for legacy messages during migration
@@ -177,24 +170,6 @@ model EventRating {
   @@unique([eventId, volunteerId])
   @@index([eventId])
   @@index([volunteerId])
-}
-
-/// Logged hours for a volunteer (optionally tied to an event)
-model TimeEntry {
-  id          String   @id @default(cuid())
-  volunteerId String
-  eventId     String?
-  date        DateTime // when the volunteering occurred
-  hours       Decimal // number of hours (e.g., 1.5)
-  notes       String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  volunteer Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
-  event     Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
-
-  @@index([volunteerId, date])
 }
 
 /// One group chat per event
@@ -242,24 +217,6 @@ model OrganizationJoinRequest {
   @@index([organizationId, status, createdAt])
 }
 
-/// Short-lived state to persist signup intent across OAuth redirects
-model SignupIntent {
-  id             String            @id @default(cuid())
-  token          String            @unique
-  kind           SignupIntentKind
-  organizationId String?
-  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String?           // existing user initiating the flow (optional)
-  email          String?           // prefilled or expected email (optional)
-  metadata       Json?             // extra context if needed
-  createdAt      DateTime          @default(now())
-  expiresAt      DateTime
-  usedAt         DateTime?
-
-  @@index([organizationId, kind])
-  @@index([email, kind])
-}
-
 /// Per-user notification preferences
 model NotificationPreference {
   userId       String  @id // Supabase auth.users.id (UUID)
@@ -292,12 +249,6 @@ enum JoinStatus {
   DECLINED
 }
 
-enum SignupIntentKind {
-  ORG_CREATE
-  ORG_JOIN
-  USER_SIGNUP
-}
-
 enum ChatMessageKind {
   MESSAGE /// regular user/org message
   ANNOUNCEMENT /// organization announcement
@@ -306,4 +257,9 @@ enum ChatMessageKind {
 enum MessageAuthorType {
   USER
   SYSTEM
+}
+
+enum OrganizationType {
+  STUDENT   /// Student-run organization
+  COMMUNITY /// Community organization
 }

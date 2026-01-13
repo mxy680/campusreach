@@ -100,7 +100,6 @@ export default function OpportunitiesPage() {
           timeCommitment: timeCommitment || null,
           notes: notes || null,
           skills: selectedSkills,
-          attachments: [], // TODO: Add file upload URLs
         }),
       })
 
@@ -216,7 +215,6 @@ export default function OpportunitiesPage() {
           timeCommitment: timeCommitment || null,
           notes: notes || null,
           skills: selectedSkills,
-          attachments: [], // TODO: Add file upload URLs
         }),
       })
 

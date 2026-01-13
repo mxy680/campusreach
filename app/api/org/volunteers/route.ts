@@ -120,26 +120,55 @@ export async function GET(request: Request) {
               select: {
                 endsAt: true,
                 startsAt: true,
+                timeCommitmentHours: true,
               },
             },
           },
           orderBy: {
             createdAt: "asc",
           },
-          take: 1, // Get the earliest signup
-        },
-        timeEntries: {
-          where: {
-            eventId: {
-              in: targetEventIds,
-            },
-          },
+          take: 1, // Get the earliest signup for this event
         },
       },
       orderBy: {
         createdAt: "desc",
       },
     })
+
+    // For each volunteer, get their verified signups across ALL org events to calculate total hours
+    const volunteerIds = volunteersWithSignups.map((v) => v.id)
+    const allVerifiedSignups = await prisma.eventSignup.findMany({
+      where: {
+        volunteerId: { in: volunteerIds },
+        eventId: { in: eventIds }, // All events for this organization
+        hoursVerified: true,
+      },
+      include: {
+        event: {
+          select: {
+            timeCommitmentHours: true,
+            startsAt: true,
+            endsAt: true,
+          },
+        },
+      },
+    })
+
+    // Build a map of volunteer ID to total verified hours
+    const volunteerTotalHoursMap = new Map<string, number>()
+    for (const signup of allVerifiedSignups) {
+      const volunteerId = signup.volunteerId
+      // Calculate hours from event duration or timeCommitmentHours
+      let hours = signup.event.timeCommitmentHours || 0
+      if (!hours && signup.event.startsAt && signup.event.endsAt) {
+        const durationMs = new Date(signup.event.endsAt).getTime() - new Date(signup.event.startsAt).getTime()
+        hours = durationMs / (1000 * 60 * 60) // Convert to hours
+      }
+      volunteerTotalHoursMap.set(
+        volunteerId,
+        (volunteerTotalHoursMap.get(volunteerId) || 0) + hours
+      )
+    }
 
     // Get the selected event details to check if it's over
     const selectedEvent = eventId
@@ -157,11 +186,9 @@ export async function GET(request: Request) {
     const volunteersData = volunteersWithSignups.map((volunteer) => {
       // Get the first (earliest) signup - if filtering by event, this will be for that event
       const relevantSignup = volunteer.signups[0]
-      
-      const totalHours = volunteer.timeEntries.reduce(
-        (sum, entry) => sum + Number(entry.hours),
-        0
-      )
+
+      // Total hours from all verified signups across this organization's events
+      const totalHours = volunteerTotalHoursMap.get(volunteer.id) || 0
 
       // Check if event is over (use the selected event's end date, or signup's event end date as fallback)
       const eventEndDate = selectedEvent?.endsAt || selectedEvent?.startsAt || relevantSignup?.event?.endsAt || relevantSignup?.event?.startsAt

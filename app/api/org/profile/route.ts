@@ -65,8 +65,8 @@ export async function PATCH(request: Request) {
     const body = await request.json()
     const {
       name,
+      type,
       description,
-      mission,
       categories,
       contactName,
       contactEmail,
@@ -83,14 +83,12 @@ export async function PATCH(request: Request) {
       where: { id: orgMember.organizationId },
       data: {
         name: name || null,
+        type: type || null,
         description: description || null,
-        mission: mission || null,
         categories: categories || [],
         contactName: contactName || null,
         contactEmail: contactEmail || null,
         contactPhone: contactPhone || null,
-        // Note: website field doesn't exist in schema, we might need to add it
-        // For now, we'll skip it or store it in a custom field
         twitter: twitter || null,
         instagram: instagram || null,
         facebook: facebook || null,

@@ -69,6 +69,7 @@ type Opportunity = {
     id: string
     name: string | null
     logoUrl: string | null
+    type: "STUDENT" | "COMMUNITY" | null
   } | null
   signups: Array<{ id: string; volunteerId: string }>
   hasSignedUp: boolean
@@ -82,6 +83,7 @@ export default function ExplorePage() {
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
   const [specialty, setSpecialty] = useState("Any")
+  const [orgType, setOrgType] = useState("Any")
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
   const [signingUp, setSigningUp] = useState<string | null>(null)
@@ -100,6 +102,9 @@ export default function ExplorePage() {
       if (specialty && specialty !== "Any") {
         params.append("specialty", specialty)
       }
+      if (orgType && orgType !== "Any") {
+        params.append("orgType", orgType)
+      }
 
       const response = await fetch(`/api/vol/opportunities?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to fetch opportunities")
@@ -117,7 +122,7 @@ export default function ExplorePage() {
     } finally {
       setLoading(false)
     }
-  }, [search, timeCommitment, fromDate, toDate, specialty])
+  }, [search, timeCommitment, fromDate, toDate, specialty, orgType])
 
   useEffect(() => {
     fetchOpportunities()
@@ -240,7 +245,7 @@ export default function ExplorePage() {
         {/* Filters */}
         <Card>
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
               {/* Search */}
               <div className="space-y-2">
                 <Label htmlFor="search">Search</Label>
@@ -319,6 +324,21 @@ export default function ExplorePage() {
                         {skill}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Organization Type */}
+              <div className="space-y-2">
+                <Label htmlFor="org-type">Organization</Label>
+                <Select value={orgType} onValueChange={setOrgType}>
+                  <SelectTrigger id="org-type" className="w-full">
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Any">Any</SelectItem>
+                    <SelectItem value="STUDENT">Student</SelectItem>
+                    <SelectItem value="COMMUNITY">Community</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

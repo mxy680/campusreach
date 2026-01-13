@@ -94,7 +94,6 @@ export default function OrganizationSettings() {
   const [deactivating, setDeactivating] = useState(false)
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false)
   const [user, setUser] = useState<OrgMe | null>(null)
-  const [email, setEmail] = useState("")
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null)
   const [editingMemberName, setEditingMemberName] = useState("")
   const [savingProfile, setSavingProfile] = useState(false)
@@ -137,7 +136,6 @@ export default function OrganizationSettings() {
         if (!userRes.ok) throw new Error("Failed to fetch user data")
         const userData = (await userRes.json()) as OrgMe
         setUser(userData)
-        setEmail(userData.user.email || "")
 
         // Fetch preferences
         const prefsRes = await fetch("/api/org/settings")

@@ -33,6 +33,7 @@ export async function GET(request: Request) {
     const fromDate = searchParams.get("fromDate")
     const toDate = searchParams.get("toDate")
     const specialty = searchParams.get("specialty")
+    const orgType = searchParams.get("orgType")
 
     // Build where clause
     const startsAtFilter: {
@@ -94,6 +95,13 @@ export async function GET(request: Request) {
       }
     }
 
+    // Organization type filter
+    if (orgType && orgType !== "Any") {
+      where.organization = {
+        type: orgType,
+      }
+    }
+
     // Get all events matching filters
     const events = await prisma.event.findMany({
       where,
@@ -104,6 +112,7 @@ export async function GET(request: Request) {
             id: true,
             name: true,
             logoUrl: true,
+            type: true,
           },
         },
         signups: {

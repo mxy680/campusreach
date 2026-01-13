@@ -40,7 +40,6 @@ export async function PATCH(
       timeCommitment,
       notes,
       skills,
-      attachments,
     } = body
 
     // Validate required fields
@@ -89,7 +88,6 @@ export async function PATCH(
           : null,
         notes: notes || null,
         specialties: skills || [],
-        attachments: attachments || [],
       },
     })
 
