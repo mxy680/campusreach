@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { queueMessageNotification } from "@/lib/message-notification-queue"
 
 export async function GET(
   request: Request,
@@ -265,6 +266,9 @@ export async function POST(
         body: message.trim(),
       },
     })
+
+    // Queue notification for other participants
+    await queueMessageNotification(eventId, chatMessage.id, user.id)
 
     // Get organization member info for the response
     const orgMemberWithOrg = await prisma.organizationMember.findFirst({

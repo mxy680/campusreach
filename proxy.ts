@@ -53,6 +53,11 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse
   }
 
+  // Allow access to cron API routes (they use CRON_SECRET for auth)
+  if (pathname.startsWith('/api/cron')) {
+    return supabaseResponse
+  }
+
   // Protect all other routes - redirect to signin if not authenticated
   if (!user) {
     const url = request.nextUrl.clone()

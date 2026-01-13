@@ -64,6 +64,7 @@ model Organization {
   // Preferences
   timezone                     String? // e.g., "America/New_York"
   locale                       String? // e.g., "en-US"
+  defaultEventLocationTemplate String?
   defaultTimeCommitmentHours   Int?
   defaultVolunteersNeeded      Int?
 
@@ -229,6 +230,32 @@ model NotificationPreference {
   updatedAt DateTime @updatedAt
 }
 
+/// Tracks sent emails to prevent duplicates and enable analytics
+model EmailLog {
+  id          String    @id @default(cuid())
+  userId      String    // Supabase auth.users.id (UUID)
+  email       String    // Recipient email address
+  type        EmailType
+  referenceId String?   // Event ID, Message ID, etc. for context
+  sentAt      DateTime  @default(now())
+
+  @@index([userId, type, sentAt])
+  @@index([referenceId, type])
+}
+
+/// Queue for batching message notifications
+model MessageNotificationQueue {
+  id          String    @id @default(cuid())
+  userId      String    // Recipient user ID
+  eventId     String
+  messageIds  String[]  // Array of message IDs to include
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@unique([userId, eventId])
+  @@index([processedAt])
+}
+
 // Enums
 
 enum TransportMode {
@@ -262,4 +289,10 @@ enum MessageAuthorType {
 enum OrganizationType {
   STUDENT   /// Student-run organization
   COMMUNITY /// Community organization
+}
+
+enum EmailType {
+  WEEKLY_DIGEST
+  MESSAGE_NOTIFICATION
+  RATING_REMINDER
 }
