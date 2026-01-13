@@ -82,7 +82,7 @@ interface UserIdMapping {
 }
 
 interface MigrationState {
-  phase: 'users' | 'orgs' | 'events' | 'members' | 'complete';
+  phase: 'users' | 'orgs' | 'events' | 'members' | 'volunteers' | 'contacts' | 'signups' | 'groupchats' | 'ratings' | 'timeentries' | 'messages' | 'complete';
   userMapping: Record<string, UserIdMapping>;
   lastProcessedUserIndex: number;
 }
@@ -269,12 +269,6 @@ async function migrateUsers(
     }
 
     try {
-      // Check if user already exists in Supabase
-      const { data: existingList } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1,
-      });
-
       // Try to create the user
       const createOptions: Parameters<typeof supabaseAdmin.auth.admin.createUser>[0] = {
         email: user.email,
