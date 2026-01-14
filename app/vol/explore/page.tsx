@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
 
-const SKILLS = [
+const CATEGORIES = [
   "Communication",
   "Leadership",
   "Teamwork",
@@ -42,6 +42,7 @@ const SKILLS = [
   "Teaching",
   "Mentoring",
   "Fundraising",
+  "Healthcare",
 ]
 
 const TIME_COMMITMENTS = [
@@ -310,16 +311,16 @@ export default function ExplorePage() {
                 </div>
               </div>
 
-              {/* Specialties */}
+              {/* Category */}
               <div className="space-y-2">
-                <Label htmlFor="specialties">Specialties</Label>
+                <Label htmlFor="category">Category</Label>
                 <Select value={specialty} onValueChange={setSpecialty}>
-                  <SelectTrigger id="specialties" className="w-full">
+                  <SelectTrigger id="category" className="w-full">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Any">Any</SelectItem>
-                    {SKILLS.map((skill) => (
+                    {CATEGORIES.map((skill) => (
                       <SelectItem key={skill} value={skill}>
                         {skill}
                       </SelectItem>

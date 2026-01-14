@@ -26,7 +26,7 @@ import { IconCalendar, IconPencil, IconTrash } from "@tabler/icons-react"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 
-const SKILLS = [
+const CATEGORIES = [
   "Communication",
   "Leadership",
   "Teamwork",
@@ -39,6 +39,7 @@ const SKILLS = [
   "Teaching",
   "Mentoring",
   "Fundraising",
+  "Healthcare",
 ]
 
 type Event = {
@@ -324,7 +325,7 @@ export default function OpportunitiesPage() {
     const randomVolunteers = Math.floor(Math.random() * 50) + 5 // 5-55 volunteers
     const randomTimeCommitment = (Math.random() * 8 + 1).toFixed(1) // 1-9 hours
     const randomNotes = notes[Math.floor(Math.random() * notes.length)]
-    const randomSkills = SKILLS.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 3) + 1) // 1-3 random skills
+    const randomSkills = CATEGORIES.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 3) + 1) // 1-3 random skills
 
     // Generate a random date/time in the future (next 30 days)
     const now = new Date()
@@ -474,11 +475,11 @@ export default function OpportunitiesPage() {
                 />
               </div>
 
-              {/* Skills required and Upload files side by side */}
+              {/* Categories and Upload files side by side */}
               <div className="grid grid-cols-2 gap-4">
-                {/* Skills required (optional) */}
+                {/* Categories (optional) */}
                 <div className="space-y-2">
-                  <Label htmlFor="skills">Skills required (optional)</Label>
+                  <Label htmlFor="categories">Categories (optional)</Label>
                   <Select
                     value={selectedSkills.length > 0 ? (selectedSkills.length === 1 ? selectedSkills[0] : "multiple") : ""}
                     onValueChange={(value) => {
@@ -488,17 +489,17 @@ export default function OpportunitiesPage() {
                       }
                     }}
                   >
-                    <SelectTrigger id="skills" className="w-full">
+                    <SelectTrigger id="categories" className="w-full">
                       {selectedSkills.length === 0 ? (
-                        <SelectValue placeholder="Select skills" />
+                        <SelectValue placeholder="Select categories" />
                       ) : selectedSkills.length === 1 ? (
                         <span className="text-sm">{selectedSkills[0]}</span>
                       ) : (
-                        <span className="text-sm">{selectedSkills.length} skills selected</span>
+                        <span className="text-sm">{selectedSkills.length} categories selected</span>
                       )}
                     </SelectTrigger>
                     <SelectContent>
-                      {SKILLS.map((skill) => (
+                      {CATEGORIES.map((skill) => (
                         <SelectItem key={skill} value={skill}>
                           {skill}
                         </SelectItem>
