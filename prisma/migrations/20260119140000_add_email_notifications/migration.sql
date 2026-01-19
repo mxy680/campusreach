@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "OrganizationType" AS ENUM ('STUDENT', 'COMMUNITY');
+
+-- CreateEnum
 CREATE TYPE "EmailType" AS ENUM ('WEEKLY_DIGEST', 'MESSAGE_NOTIFICATION', 'RATING_REMINDER');
 
 -- CreateTable
