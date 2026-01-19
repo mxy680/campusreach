@@ -8,7 +8,7 @@
     "dev:prod": "mv .env.local .env.development.local 2>/dev/null; mv .env.production.local .env.local 2>/dev/null; next dev",
     "env:local": "mv .env.local .env.production.local 2>/dev/null; mv .env.development.local .env.local 2>/dev/null; echo 'Switched to local Supabase'",
     "env:prod": "mv .env.local .env.development.local 2>/dev/null; mv .env.production.local .env.local 2>/dev/null; echo 'Switched to production Supabase'",
-    "build": "prisma generate && next build",
+    "build": "prisma migrate deploy && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
