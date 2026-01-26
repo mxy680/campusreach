@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { IconCalendar, IconSearch, IconMapPin, IconClock, IconUsers } from "@tabler/icons-react"
+import { IconCalendar, IconSearch, IconMapPin, IconClock, IconUsers, IconInfoCircle } from "@tabler/icons-react"
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -363,7 +363,14 @@ export default function ExplorePage() {
                 {opportunities.map((opportunity) => (
                   <Card key={opportunity.id} className="border flex flex-col h-full hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-lg font-semibold leading-tight line-clamp-2 min-h-[3.5rem]">{opportunity.title}</CardTitle>
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg font-semibold leading-tight line-clamp-2 min-h-[3.5rem] flex-1">{opportunity.title}</CardTitle>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 -mt-1 -mr-2 shrink-0" asChild>
+                          <Link href={`/vol/explore/${opportunity.id}`}>
+                            <IconInfoCircle className="h-5 w-5" />
+                          </Link>
+                        </Button>
+                      </div>
                       {opportunity.organization?.name && (
                         <Link
                           href={`/org/${opportunity.organization.id}`}
