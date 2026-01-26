@@ -394,19 +394,17 @@ export default function ExplorePage() {
 
                       {/* Metadata section - always at bottom */}
                       <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <IconCalendar className="h-4 w-4 shrink-0 text-muted-foreground/70" />
                           <span className="truncate">{formatDate(opportunity.startsAt)}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <IconMapPin className="h-4 w-4 shrink-0 text-muted-foreground/70" />
                           <span className="truncate">{opportunity.location}</span>
-                          {opportunity.timeCommitmentHours && (
-                            <>
-                              <IconClock className="h-4 w-4 shrink-0 text-muted-foreground/70 ml-2" />
-                              <span>{opportunity.timeCommitmentHours} hour{opportunity.timeCommitmentHours !== 1 ? "s" : ""}</span>
-                            </>
-                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <IconClock className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                          <span>{opportunity.timeCommitmentHours ? `${opportunity.timeCommitmentHours} hour${opportunity.timeCommitmentHours !== 1 ? "s" : ""}` : "—"}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <IconUsers className="h-4 w-4 shrink-0 text-muted-foreground/70" />
