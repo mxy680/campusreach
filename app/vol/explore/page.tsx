@@ -362,80 +362,82 @@ export default function ExplorePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {opportunities.map((opportunity) => (
                   <Card key={opportunity.id} className="border flex flex-col h-full hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-lg font-semibold leading-tight">{opportunity.title}</CardTitle>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-semibold leading-tight line-clamp-2 min-h-[3.5rem]">{opportunity.title}</CardTitle>
+                      {opportunity.organization?.name && (
+                        <Link
+                          href={`/org/${opportunity.organization.id}`}
+                          className="flex items-center gap-2 hover:opacity-80 transition-opacity pt-1"
+                        >
+                          <Avatar className="h-6 w-6">
+                            {opportunity.organization.logoUrl && (
+                              <AvatarImage src={opportunity.organization.logoUrl} alt={opportunity.organization.name} />
+                            )}
+                            <AvatarFallback className="text-xs">
+                              {opportunity.organization.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <CardDescription className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                            {opportunity.organization.name}
+                          </CardDescription>
+                        </Link>
+                      )}
                     </CardHeader>
                     <CardContent className="flex flex-col flex-1 pt-0">
-                      <div className="mt-auto space-y-4">
-                        {opportunity.organization?.name && (
-                          <Link 
-                            href={`/org/${opportunity.organization.id}`}
-                            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                          >
-                            <Avatar className="h-8 w-8">
-                              {opportunity.organization.logoUrl && (
-                                <AvatarImage src={opportunity.organization.logoUrl} alt={opportunity.organization.name} />
-                              )}
-                              <AvatarFallback className="text-xs">
-                                {opportunity.organization.name.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <CardDescription className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                              {opportunity.organization.name}
-                            </CardDescription>
-                          </Link>
-                        )}
-                        {opportunity.shortDescription && (
-                          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                            {opportunity.shortDescription}
-                          </p>
-                        )}
-                        <div className="space-y-2.5 pt-1">
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <IconCalendar className="h-4 w-4 shrink-0 text-muted-foreground/70" />
-                              <span className="truncate">{formatDate(opportunity.startsAt)}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <IconMapPin className="h-4 w-4 shrink-0 text-muted-foreground/70" />
-                              <span className="truncate">{opportunity.location}</span>
-                            </div>
-                            {opportunity.timeCommitmentHours && (
-                              <div className="flex items-center gap-1.5">
-                                <IconClock className="h-4 w-4 shrink-0 text-muted-foreground/70" />
-                                <span>{opportunity.timeCommitmentHours} hour{opportunity.timeCommitmentHours !== 1 ? "s" : ""}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1.5">
-                              <IconUsers className="h-4 w-4 shrink-0 text-muted-foreground/70" />
-                              <span>
-                                {opportunity.spotsRemaining} of {opportunity.volunteersNeeded} spots remaining
-                              </span>
-                            </div>
+                      {/* Description with fixed height */}
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 min-h-[2.5rem]">
+                        {opportunity.shortDescription || ""}
+                      </p>
+
+                      {/* Spacer to push metadata to bottom */}
+                      <div className="flex-1 min-h-4" />
+
+                      {/* Metadata section - always at bottom */}
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <IconCalendar className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                            <span className="truncate">{formatDate(opportunity.startsAt)}</span>
                           </div>
-                          {opportunity.specialties.length > 0 && (
-                            <div className="flex flex-wrap gap-2 pt-1">
-                              {opportunity.specialties.map((skill) => (
-                                <Badge key={skill} variant="outline" className="text-xs font-normal">
-                                  {skill}
-                                </Badge>
-                              ))}
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <IconMapPin className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                            <span className="truncate">{opportunity.location}</span>
+                          </div>
+                          {opportunity.timeCommitmentHours && (
+                            <div className="flex items-center gap-1.5">
+                              <IconClock className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                              <span>{opportunity.timeCommitmentHours} hour{opportunity.timeCommitmentHours !== 1 ? "s" : ""}</span>
                             </div>
                           )}
                         </div>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <IconUsers className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                          <span>
+                            {opportunity.spotsRemaining} of {opportunity.volunteersNeeded} spots remaining
+                          </span>
+                        </div>
+                        {opportunity.specialties.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {opportunity.specialties.map((skill) => (
+                              <Badge key={skill} variant="outline" className="text-xs font-normal">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         <Button
                           onClick={() => opportunity.hasSignedUp ? handleUnsignUp(opportunity.id) : handleSignUp(opportunity.id)}
                           disabled={(opportunity.hasSignedUp && unsigningUp === opportunity.id) || (!opportunity.hasSignedUp && (signingUp === opportunity.id || opportunity.spotsRemaining <= 0))}
-                          className={`w-full ${opportunity.hasSignedUp 
-                            ? 'bg-red-500 hover:bg-red-600 text-white' 
+                          className={`w-full ${opportunity.hasSignedUp
+                            ? 'bg-red-500 hover:bg-red-600 text-white'
                             : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
                         >
-                          {opportunity.hasSignedUp 
+                          {opportunity.hasSignedUp
                             ? (unsigningUp === opportunity.id ? "Unregistering..." : "Unregister")
-                            : (signingUp === opportunity.id 
-                                ? "Registering..." 
-                                : opportunity.spotsRemaining <= 0 
-                                ? "Full" 
+                            : (signingUp === opportunity.id
+                                ? "Registering..."
+                                : opportunity.spotsRemaining <= 0
+                                ? "Full"
                                 : "Register")}
                         </Button>
                       </div>
