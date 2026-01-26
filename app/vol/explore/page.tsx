@@ -414,15 +414,13 @@ export default function ExplorePage() {
                             {opportunity.spotsRemaining} of {opportunity.volunteersNeeded} spots remaining
                           </span>
                         </div>
-                        {opportunity.specialties.length > 0 && (
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {opportunity.specialties.map((skill) => (
-                              <Badge key={skill} variant="outline" className="text-xs font-normal">
-                                {skill}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                        <div className="flex flex-wrap gap-2 pt-1 min-h-[1.75rem]">
+                          {opportunity.specialties.map((skill) => (
+                            <Badge key={skill} variant="outline" className="text-xs font-normal">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
                         <Button
                           onClick={() => opportunity.hasSignedUp ? handleUnsignUp(opportunity.id) : handleSignUp(opportunity.id)}
                           disabled={(opportunity.hasSignedUp && unsigningUp === opportunity.id) || (!opportunity.hasSignedUp && (signingUp === opportunity.id || opportunity.spotsRemaining <= 0))}
